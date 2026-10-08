@@ -1,0 +1,372 @@
+/* ==========================================================================
+   Schlaftagebuch – Styles
+   ========================================================================== */
+
+/* --------------------------------------------------------------------------
+   Design tokens
+   -------------------------------------------------------------------------- */
+:root {
+  --bg: #f5f7fa;
+  --card: #fff;
+  --text: #172033;
+  --muted: #687386;
+  --line: #dfe4ea;
+  --accent: #334155;
+  --accent2: #475569;
+  --good: #15803d;
+  --radius: 18px;
+}
+
+/* --------------------------------------------------------------------------
+   Base / reset
+   -------------------------------------------------------------------------- */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+}
+
+h2 {
+  font-size: 20px;
+  margin: 0 0 15px;
+}
+
+h3 {
+  font-size: 16px;
+  margin: 0 0 10px;
+}
+
+/* --------------------------------------------------------------------------
+   Header
+   -------------------------------------------------------------------------- */
+header {
+  background: var(--accent);
+  color: #fff;
+  padding: 22px 18px 20px;
+  position: sticky;
+  top: 0;
+  z-index: 5;
+}
+
+.header-inner {
+  max-width: 900px;
+  margin: auto;
+}
+
+.title {
+  font-size: 25px;
+  font-weight: 750;
+}
+
+.subtitle {
+  opacity: 0.8;
+  font-size: 14px;
+  margin-top: 3px;
+}
+
+/* --------------------------------------------------------------------------
+   Tab navigation
+   -------------------------------------------------------------------------- */
+nav {
+  max-width: 900px;
+  margin: 0 auto;
+  display: flex;
+  gap: 8px;
+  padding: 12px 18px 0;
+}
+
+nav button {
+  flex: 1;
+  border: 0;
+  background: transparent;
+  padding: 11px 8px;
+  border-radius: 12px;
+  font-size: 14px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+nav button.active {
+  background: #e9edf2;
+  color: var(--text);
+  font-weight: 700;
+}
+
+/* --------------------------------------------------------------------------
+   Page layout & views (only the active view is shown)
+   -------------------------------------------------------------------------- */
+main {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 16px 18px 50px;
+}
+
+.view {
+  display: none;
+}
+
+.view.active {
+  display: block;
+}
+
+/* --------------------------------------------------------------------------
+   Cards
+   -------------------------------------------------------------------------- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 8px rgba(15, 23, 42, 0.035);
+}
+
+/* --------------------------------------------------------------------------
+   Form layout
+   -------------------------------------------------------------------------- */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+/* Spans all columns of the parent grid */
+.full {
+  grid-column: 1 / -1;
+}
+
+label {
+  font-size: 13px;
+  font-weight: 650;
+  color: #4b5563;
+}
+
+input,
+select {
+  width: 100%;
+  font: inherit;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 11px;
+  background: #fff;
+  color: var(--text);
+}
+
+.small {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Large read-only value (calculated durations) */
+.calc {
+  font-size: 22px;
+  font-weight: 750;
+  color: var(--accent);
+  padding-top: 7px;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+button.primary {
+  width: 100%;
+  border: 0;
+  background: var(--accent);
+  color: white;
+  font: inherit;
+  font-weight: 700;
+  padding: 13px;
+  border-radius: 12px;
+  cursor: pointer;
+}
+
+button.secondary {
+  border: 1px solid var(--line);
+  background: #fff;
+  color: var(--text);
+  font: inherit;
+  padding: 10px 13px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+/* --------------------------------------------------------------------------
+   Star rating
+   -------------------------------------------------------------------------- */
+.stars {
+  display: flex;
+  gap: 5px;
+}
+
+.star {
+  border: 0;
+  background: transparent;
+  font-size: 31px;
+  color: #cbd2db;
+  cursor: pointer;
+  padding: 0;
+}
+
+.star.on {
+  color: #f59e0b;
+}
+
+/* --------------------------------------------------------------------------
+   "Saved" notice
+   -------------------------------------------------------------------------- */
+.notice {
+  padding: 12px 14px;
+  background: #f0fdf4;
+  border: 1px solid #bbf7d0;
+  border-radius: 12px;
+  color: #166534;
+  margin-bottom: 14px;
+}
+
+/* --------------------------------------------------------------------------
+   Statistics: summary tiles
+   -------------------------------------------------------------------------- */
+.stats {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.stat {
+  background: #f8fafc;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  padding: 14px;
+}
+
+.stat b {
+  display: block;
+  font-size: 21px;
+  margin-top: 4px;
+}
+
+/* --------------------------------------------------------------------------
+   History list
+   -------------------------------------------------------------------------- */
+.entry {
+  border-top: 1px solid var(--line);
+  padding: 15px 0;
+}
+
+.entry:first-child {
+  border-top: 0;
+  padding-top: 0;
+}
+
+.entry-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.badge {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Statistics: bar chart
+   -------------------------------------------------------------------------- */
+.bar-wrap {
+  height: 180px;
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  border-bottom: 1px solid var(--line);
+  padding: 10px 4px 0;
+}
+
+.bar {
+  flex: 1;
+  background: #64748b;
+  border-radius: 7px 7px 0 0;
+  min-height: 3px;
+  position: relative;
+}
+
+/* Value label above each bar */
+.bar span {
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.bar-labels {
+  display: flex;
+  gap: 8px;
+  padding: 7px 4px;
+}
+
+.bar-labels div {
+  flex: 1;
+  text-align: center;
+  font-size: 10px;
+  color: var(--muted);
+}
+
+/* --------------------------------------------------------------------------
+   Utilities
+   -------------------------------------------------------------------------- */
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 25px 5px;
+}
+
+.danger {
+  color: #b91c1c;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive: narrow screens (phones)
+   -------------------------------------------------------------------------- */
+@media (max-width: 650px) {
+  .grid,
+  .row {
+    grid-template-columns: 1fr;
+  }
+
+  .stats {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  main {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .card {
+    padding: 16px;
+  }
+
+  nav {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+}

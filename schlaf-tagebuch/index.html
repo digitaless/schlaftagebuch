@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="de">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#334155">
+  <title>Schlaftagebuch.ch</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- ===== Header ===== -->
+  <header>
+    <div class="header-inner">
+      <div class="title">Schlaftagebuch.ch</div>
+      <div class="subtitle">Kein Konto. Kein Tracking. Keine Cloud. Deine Schlafdaten bleiben auf deinem Gerät.</div>
+    </div>
+  </header>
+
+  <!-- ===== Tab navigation (data-view matches the id of a <section> below) ===== -->
+  <nav>
+    <button class="tab active" data-view="today">Heute</button>
+    <button class="tab" data-view="history">Verlauf</button>
+    <button class="tab" data-view="stats">Statistik</button>
+    <button class="tab" data-view="settings">Einstellungen</button>
+  </nav>
+
+  <main>
+
+    <!-- ===== View: Heute (entry form) ===== -->
+    <section id="today" class="view active">
+      <div id="savedNotice" class="notice" style="display:none">Eintrag gespeichert.</div>
+
+      <div class="card">
+        <h2 id="todayTitle">Schlaf von letzter Nacht</h2>
+
+        <div class="grid">
+          <div class="field">
+            <label for="date">Datum</label>
+            <input id="date" type="date">
+          </div>
+
+          <p id="windowInfo" class="small full"></p>
+
+          <div class="field">
+            <label for="bed">Wann bist du abends ins Bett gegangen?</label>
+            <input id="bed" type="time">
+          </div>
+
+          <div class="field">
+            <label for="wake">Wann bist du morgens aufgestanden?</label>
+            <input id="wake" type="time">
+          </div>
+
+          <div class="field">
+            <label>Gesamte Schlafdauer</label>
+            <div class="calc" id="sleepCalc">–</div>
+          </div>
+
+          <div class="field">
+            <label for="awake">Wie lange insgesamt wach im Bett?</label>
+            <input id="awake" type="number" min="0" step="5" placeholder="Minuten">
+          </div>
+
+          <div class="field">
+            <label>Effektive Schlafdauer</label>
+            <div class="calc" id="effectiveCalc">–</div>
+          </div>
+
+          <div class="field">
+            <label for="nap">Tagesschlaf</label>
+            <div class="row">
+              <select id="nap">
+                <option value="0">Nein</option>
+                <option value="1">Ja</option>
+              </select>
+              <input id="napMin" type="number" min="0" step="5" value="0" placeholder="Minuten">
+            </div>
+          </div>
+
+          <div class="field full">
+            <label>Wie zufrieden bist du mit deiner Schlafqualität?</label>
+            <div class="stars" id="stars">
+              <button class="star" data-value="1">★</button>
+              <button class="star" data-value="2">★</button>
+              <button class="star" data-value="3">★</button>
+              <button class="star" data-value="4">★</button>
+              <button class="star" data-value="5">★</button>
+            </div>
+            <div class="small" id="qualityText">Bitte auswählen</div>
+          </div>
+
+          <div class="field full">
+            <label for="notes">Notizen (optional)</label>
+            <input id="notes" type="text" placeholder="z.B. spät gegessen, Alkohol, Stress ...">
+          </div>
+
+          <div class="full">
+            <button class="primary" id="save">Eintrag speichern</button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== View: Verlauf (list rendered by app.js) ===== -->
+    <section id="history" class="view">
+      <div class="card">
+        <h2>Verlauf</h2>
+        <div id="historyList"></div>
+      </div>
+    </section>
+
+    <!-- ===== View: Statistik (tiles + chart rendered by app.js) ===== -->
+    <section id="stats" class="view">
+      <div class="card">
+        <h2>Letzte 7 Nächte</h2>
+        <div class="stats" id="statCards"></div>
+      </div>
+      <div class="card">
+        <h3>Effektive Schlafdauer</h3>
+        <div id="chart"></div>
+      </div>
+    </section>
+
+    <!-- ===== View: Einstellungen ===== -->
+    <section id="settings" class="view">
+      <div class="card">
+        <h2>Einstellungen</h2>
+        <div class="grid">
+          <div class="field">
+            <label for="defaultStart">Standard-Schlaffenster von</label>
+            <input id="defaultStart" type="time">
+          </div>
+          <div class="field">
+            <label for="defaultEnd">bis</label>
+            <input id="defaultEnd" type="time">
+          </div>
+        </div>
+        <br>
+        <button class="primary" id="saveSettings">Einstellungen speichern</button>
+      </div>
+
+      <div class="card">
+        <h3>Daten</h3>
+        <p class="small">Die Einträge werden nur in diesem Browser auf diesem Gerät gespeichert.</p>
+        <button class="secondary" id="export">Daten als JSON exportieren</button>
+        <button class="secondary" id="clear">Alle Daten löschen</button>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
