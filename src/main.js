@@ -47,8 +47,6 @@ const dom = {
   savedNotice: byId("savedNotice"),
   todayTitle: byId("todayTitle"),
   date: byId("date"),
-  windowStart: byId("windowStart"),
-  windowEnd: byId("windowEnd"),
   bedTime: byId("bed"),
   wakeTime: byId("wake"),
   awakeMinutes: byId("awake"),
@@ -77,13 +75,25 @@ const dom = {
    Time & formatting helpers
    -------------------------------------------------------------------------- */
 
-/**
- * Today's date as "YYYY-MM-DD".
- * Note: toISOString() uses UTC, so shortly after midnight local time
- * this may still return the previous day.
- */
-function getTodayISO() {
-  return new Date().toISOString().slice(0, 10);
+/** Formats a local calendar date as "YYYY-MM-DD". */
+function formatLocalDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+/** Previous night as a local calendar date, without UTC conversion. */
+function getPreviousNightISO() {
+  const date = new Date();
+  date.setDate(date.getDate() - 1);
+  return formatLocalDate(date);
+}
+
+function renderWindowInfo() {
+  byId("windowInfo").textContent =
+    `Dein festgelegtes Schlaffenster: ${settings.start}–${settings.end} Uhr. ` +
+    "Änderungen kannst du unter Einstellungen vornehmen.";
 }
 
 /** Converts "HH:MM" to minutes since midnight. Returns null for empty input. */
@@ -178,13 +188,11 @@ function renderStars() {
     : "Bitte auswählen";
 }
 
-/** Clears the form and pre-fills date and default sleep window. */
-function resetForm(date = getTodayISO()) {
+/** Clears the form and pre-fills the date of the previous night. */
+function resetForm(date = getPreviousNightISO()) {
   editingDate = null;
 
   dom.date.value = date;
-  dom.windowStart.value = settings.start;
-  dom.windowEnd.value = settings.end;
 
   dom.bedTime.value = "";
   dom.wakeTime.value = "";
@@ -207,9 +215,6 @@ function loadEntryIntoForm(entry) {
   editingDate = entry.date;
 
   dom.date.value = entry.date;
-  dom.windowStart.value = entry.windowStart || settings.start;
-  dom.windowEnd.value = entry.windowEnd || settings.end;
-
   dom.bedTime.value = entry.bed;
   dom.wakeTime.value = entry.wake;
   dom.awakeMinutes.value = entry.awake || 0;
@@ -238,7 +243,10 @@ function handleSaveEntry() {
     return;
   }
 
-  const date = dom.date.value || getTodayISO();
+  const date = dom.date.value || getPreviousNightISO();
+  const existingEntry =
+    entries.find((entry) => entry.date === date) ||
+    entries.find((entry) => entry.date === editingDate);
   const totalMinutes = getDurationMinutes(dom.bedTime.value, dom.wakeTime.value);
   const awakeMinutes = Number(dom.awakeMinutes.value || 0);
   const napMinutes =
@@ -246,8 +254,8 @@ function handleSaveEntry() {
 
   const entry = {
     date,
-    windowStart: dom.windowStart.value,
-    windowEnd: dom.windowEnd.value,
+    windowStart: existingEntry?.windowStart || settings.start,
+    windowEnd: existingEntry?.windowEnd || settings.end,
     bed: dom.bedTime.value,
     wake: dom.wakeTime.value,
     total: totalMinutes,
@@ -276,7 +284,7 @@ function handleSaveEntry() {
 
   renderHistory();
   renderStats();
-  resetForm(getTodayISO());
+  resetForm();
 }
 
 /* --------------------------------------------------------------------------
@@ -397,6 +405,7 @@ function handleSaveSettings() {
     end: dom.defaultEnd.value,
   };
   saveSettings();
+  renderWindowInfo();
   alert("Einstellungen gespeichert.");
   resetForm();
 }
@@ -485,6 +494,7 @@ function bindEvents() {
 function init() {
   dom.defaultStart.value = settings.start;
   dom.defaultEnd.value = settings.end;
+  renderWindowInfo();
   dom.napMinutes.disabled = true;
 
   bindEvents();
