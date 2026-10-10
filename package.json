@@ -1,0 +1,9 @@
+{
+  "name": "schlaftagebuch",
+  "version": "0.2.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test",
+    "build": "node --check schlaf-tagebuch/app.js && node --check tests/app.test.js"
+  }
+}

@@ -37,19 +37,19 @@
         <div class="grid">
           <div class="field">
             <label for="date">Datum</label>
-            <input id="date" type="date">
+            <input id="date" type="date" required>
           </div>
 
           <p id="windowInfo" class="small full"></p>
 
           <div class="field">
             <label for="bed">Wann bist du abends ins Bett gegangen?</label>
-            <input id="bed" type="time">
+            <input id="bed" type="time" required>
           </div>
 
           <div class="field">
             <label for="wake">Wann bist du morgens aufgestanden?</label>
-            <input id="wake" type="time">
+            <input id="wake" type="time" required>
           </div>
 
           <div class="field">
@@ -81,18 +81,18 @@
           <div class="field full">
             <label>Wie zufrieden bist du mit deiner Schlafqualität?</label>
             <div class="stars" id="stars">
-              <button class="star" data-value="1">★</button>
-              <button class="star" data-value="2">★</button>
-              <button class="star" data-value="3">★</button>
-              <button class="star" data-value="4">★</button>
-              <button class="star" data-value="5">★</button>
+              <button type="button" class="star" data-value="1">★</button>
+              <button type="button" class="star" data-value="2">★</button>
+              <button type="button" class="star" data-value="3">★</button>
+              <button type="button" class="star" data-value="4">★</button>
+              <button type="button" class="star" data-value="5">★</button>
             </div>
             <div class="small" id="qualityText">Bitte auswählen</div>
           </div>
 
           <div class="field full">
             <label for="notes">Notizen (optional)</label>
-            <input id="notes" type="text" placeholder="z.B. spät gegessen, Alkohol, Stress ...">
+            <input id="notes" type="text" maxlength="500" placeholder="z.B. spät gegessen, Alkohol, Stress ...">
           </div>
 
           <div class="full">
@@ -143,12 +143,34 @@
       <div class="card">
         <h3>Daten</h3>
         <p class="small">Die Einträge werden nur in diesem Browser auf diesem Gerät gespeichert.</p>
-        <button class="secondary" id="export">Daten als JSON exportieren</button>
-        <button class="secondary" id="clear">Alle Daten löschen</button>
+        <button type="button" class="secondary" id="export">Daten als JSON exportieren</button>
+        <button type="button" class="secondary" id="import">Daten importieren / wiederherstellen</button>
+        <button type="button" class="secondary" id="clear">Alle Daten löschen</button>
       </div>
     </section>
 
   </main>
+
+  <dialog id="importDialog" aria-labelledby="importTitle">
+    <div class="card">
+      <h2 id="importTitle">Daten importieren / wiederherstellen</h2>
+      <p class="small">Der Import ersetzt die gespeicherten Einträge und Einstellungen. Vorhandene Daten werden erst nach deiner Bestätigung ersetzt.</p>
+
+      <div class="field">
+        <label for="importFile">JSON-Datei auswählen</label>
+        <input id="importFile" type="file" accept="application/json,.json">
+        <button type="button" class="secondary" id="importJson">JSON-Datei importieren</button>
+      </div>
+
+      <div class="field import-raw">
+        <label for="importRawData">Rohdaten aus einer Sicherung einfügen</label>
+        <textarea id="importRawData" rows="7" placeholder='{"settings":{"start":"23:00","end":"07:00"},"entries":[...]}'></textarea>
+        <button type="button" class="secondary" id="restoreRaw">Rohdaten wiederherstellen</button>
+      </div>
+
+      <button type="button" class="secondary" id="cancelImport">Abbrechen</button>
+    </div>
+  </dialog>
 
   <script src="app.js"></script>
 </body>
