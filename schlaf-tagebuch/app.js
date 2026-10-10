@@ -158,6 +158,7 @@ const dom = {
   defaultEnd: byId("defaultEnd"),
   saveSettingsButton: byId("saveSettings"),
   exportButton: byId("export"),
+  exportPdfButton: byId("exportPdf"),
   importButton: byId("import"),
   clearButton: byId("clear"),
   importDialog: byId("importDialog"),
@@ -166,6 +167,7 @@ const dom = {
   importRawData: byId("importRawData"),
   restoreRawButton: byId("restoreRaw"),
   cancelImportButton: byId("cancelImport"),
+  printReport: byId("printReport"),
 };
 
 /* --------------------------------------------------------------------------
@@ -537,6 +539,115 @@ function renderStats() {
    Settings (view: "Einstellungen")
    -------------------------------------------------------------------------- */
 
+function formatReportDate(dateString) {
+  if (!dateString || !isValidDate(dateString)) return "–";
+  return new Date(`${dateString}T12:00:00`).toLocaleDateString("de-CH", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+}
+
+function formatReportDateRange(entryList) {
+  if (!entryList.length) return "Keine Einträge";
+  const sorted = [...entryList].sort((a, b) => a.date.localeCompare(b.date));
+  return `${formatReportDate(sorted[0].date)} – ${formatReportDate(sorted[sorted.length - 1].date)}`;
+}
+
+function renderPrintReport() {
+  const reportEntries = [...entries].sort((a, b) => a.date.localeCompare(b.date));
+  const totalNights = reportEntries.length;
+  const avgSleep = totalNights ? formatMinutes(Math.round(averageOf(reportEntries, "effective"))) : "–";
+  const avgAwake = totalNights ? `${Math.round(averageOf(reportEntries, "awake"))} min` : "–";
+  const avgQuality = totalNights ? `${averageOf(reportEntries, "quality").toFixed(1)} / 5` : "–";
+  const exportDate = new Date().toLocaleDateString("de-CH", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+
+  const rowsHtml = reportEntries.length
+    ? reportEntries
+        .map((entry) => {
+          const qualityText = `${"★".repeat(entry.quality)}${"☆".repeat(5 - entry.quality)} · ${getQualityLabel(entry.quality)}`;
+          const noteText = entry.notes ? escapeHtml(entry.notes) : "—";
+          return `
+            <tr>
+              <td>${formatReportDate(entry.date)}</td>
+              <td>${entry.bed}</td>
+              <td>nicht erfasst</td>
+              <td>${entry.awake} min</td>
+              <td>${entry.wake}</td>
+              <td>${formatMinutes(entry.effective)}</td>
+              <td>
+                <div class="report-quality">${qualityText}</div>
+                <div class="report-notes">${noteText}</div>
+              </td>
+            </tr>`;
+        })
+        .join("")
+    : `<tr><td colspan="7" class="empty-report">Noch keine Einträge vorhanden.</td></tr>`;
+
+  dom.printReport.innerHTML = `
+    <div class="print-report__document">
+      <header class="print-report__header">
+        <div>
+          <div class="print-report__eyebrow">Schlaf- und Erholungsübersicht</div>
+          <h1>Schlaftagebuch – Auswertung</h1>
+        </div>
+        <div class="print-report__meta">
+          <div><strong>Zeitraum:</strong> ${formatReportDateRange(reportEntries)}</div>
+          <div><strong>Erstellt am:</strong> ${exportDate}</div>
+          <div><strong>Festgelegtes Schlaffenster:</strong> ${settings.start} – ${settings.end} Uhr</div>
+        </div>
+      </header>
+
+      <section class="print-report__summary">
+        <div class="report-card">
+          <span>Ø Schlafdauer</span>
+          <strong>${avgSleep}</strong>
+        </div>
+        <div class="report-card">
+          <span>Ø Einschlafzeit</span>
+          <strong>nicht erfasst</strong>
+        </div>
+        <div class="report-card">
+          <span>Ø Wachzeit</span>
+          <strong>${avgAwake}</strong>
+        </div>
+        <div class="report-card">
+          <span>Erfasste Nächte</span>
+          <strong>${totalNights}</strong>
+        </div>
+      </section>
+
+      <section class="print-report__section">
+        <h2>Einzelne Nächte</h2>
+        <table class="report-table">
+          <thead>
+            <tr>
+              <th>Datum / Nacht</th>
+              <th>Ins Bett gegangen</th>
+              <th>Eingeschlafen</th>
+              <th>Aufgewacht</th>
+              <th>Aufgestanden</th>
+              <th>Gesamte Schlafdauer</th>
+              <th>Schlafqualität / Befinden &amp; Notizen</th>
+            </tr>
+          </thead>
+          <tbody>${rowsHtml}</tbody>
+        </table>
+      </section>
+    </div>`;
+}
+
+function handleExportPdf() {
+  renderPrintReport();
+  if (window && typeof window.print === "function") {
+    window.print();
+  }
+}
+
 function handleSaveSettings() {
   const nextSettings = {
     start: dom.defaultStart.value,
@@ -732,6 +843,7 @@ function bindEvents() {
   // Settings & data
   dom.saveSettingsButton.addEventListener("click", handleSaveSettings);
   dom.exportButton.addEventListener("click", handleExport);
+  dom.exportPdfButton.addEventListener("click", handleExportPdf);
   dom.importButton.addEventListener("click", () => dom.importDialog.showModal());
   dom.importJsonButton.addEventListener("click", () => dom.importFile.click());
   dom.importFile.addEventListener("change", handleImportFile);

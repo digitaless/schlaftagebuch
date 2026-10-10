@@ -10,7 +10,7 @@
 <body>
 
   <!-- ===== Header ===== -->
-  <header>
+  <header class="no-print">
     <div class="header-inner">
       <div class="title">Schlaftagebuch.ch</div>
       <div class="subtitle">Kein Konto. Kein Tracking. Keine Cloud. Deine Schlafdaten bleiben auf deinem Gerät.</div>
@@ -18,14 +18,14 @@
   </header>
 
   <!-- ===== Tab navigation (data-view matches the id of a <section> below) ===== -->
-  <nav>
+  <nav class="no-print">
     <button class="tab active" data-view="today">Heute</button>
     <button class="tab" data-view="history">Verlauf</button>
     <button class="tab" data-view="stats">Statistik</button>
     <button class="tab" data-view="settings">Einstellungen</button>
   </nav>
 
-  <main>
+  <main class="no-print">
 
     <!-- ===== View: Heute (entry form) ===== -->
     <section id="today" class="view active">
@@ -144,6 +144,7 @@
         <h3>Daten</h3>
         <p class="small">Die Einträge werden nur in diesem Browser auf diesem Gerät gespeichert.</p>
         <button type="button" class="secondary" id="export">Daten als JSON exportieren</button>
+        <button type="button" class="secondary" id="exportPdf">Ausgeben als PDF</button>
         <button type="button" class="secondary" id="import">Daten importieren / wiederherstellen</button>
         <button type="button" class="secondary" id="clear">Alle Daten löschen</button>
       </div>
@@ -151,7 +152,9 @@
 
   </main>
 
-  <dialog id="importDialog" aria-labelledby="importTitle">
+  <div id="printReport" class="print-report" aria-live="polite"></div>
+
+  <dialog id="importDialog" class="no-print" aria-labelledby="importTitle">
     <div class="card">
       <h2 id="importTitle">Daten importieren / wiederherstellen</h2>
       <p class="small">Der Import ersetzt die gespeicherten Einträge und Einstellungen. Vorhandene Daten werden erst nach deiner Bestätigung ersetzt.</p>

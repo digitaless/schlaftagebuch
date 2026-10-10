@@ -113,8 +113,8 @@ function createApp({
     "savedNotice", "todayTitle", "date", "bed", "wake", "awake", "sleepCalc",
     "effectiveCalc", "nap", "napMin", "qualityText", "notes", "save",
     "historyList", "statCards", "chart", "defaultStart", "defaultEnd",
-    "saveSettings", "export", "import", "clear", "importDialog", "importFile",
-    "importJson", "importRawData", "restoreRaw", "cancelImport", "windowInfo",
+    "saveSettings", "export", "exportPdf", "import", "clear", "importDialog", "importFile",
+    "importJson", "importRawData", "restoreRaw", "cancelImport", "windowInfo", "printReport",
   ];
   const elements = new Map(ids.map((id) => [id, new FakeElement(id)]));
   const stars = Array.from({ length: 5 }, (_, index) => {
@@ -141,6 +141,7 @@ function createApp({
     alert: (message) => alerts.push(message),
     confirm: () => confirm,
     setTimeout: () => 1,
+    window: { print: () => {} },
     Blob: class {
       constructor(parts, options) {
         this.parts = parts;
@@ -309,4 +310,18 @@ test("settings, export, clear and navigation controls have working handlers", as
 
   await app.elements.get("clear").click();
   assert.equal(app.storage.getItem("schlaftagebuch.entries.v1"), null);
+});
+
+test("PDF export renders a printable report and triggers browser print", async () => {
+  const app = createApp({ entries: [makeEntry("2026-10-08"), makeEntry("2026-10-09")] });
+  let printCalled = false;
+  app.context.window.print = () => {
+    printCalled = true;
+  };
+
+  await app.elements.get("exportPdf").click();
+
+  assert.equal(printCalled, true);
+  assert.match(app.elements.get("printReport").innerHTML, /Schlaftagebuch – Auswertung/);
+  assert.match(app.elements.get("printReport").innerHTML, /Zeitraum:/);
 });

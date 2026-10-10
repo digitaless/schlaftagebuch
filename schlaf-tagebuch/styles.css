@@ -353,6 +353,167 @@ button.secondary {
 }
 
 /* --------------------------------------------------------------------------
+   PDF report print layout
+   -------------------------------------------------------------------------- */
+.print-report {
+  display: none;
+}
+
+.print-report__document {
+  max-width: 100%;
+  background: #fff;
+  color: var(--text);
+  padding: 14mm;
+  box-sizing: border-box;
+}
+
+.print-report__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: flex-start;
+  margin-bottom: 18px;
+  border-bottom: 2px solid #dfe4ea;
+  padding-bottom: 14px;
+}
+
+.print-report__eyebrow {
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+  margin-bottom: 6px;
+}
+
+.print-report__header h1 {
+  margin: 0;
+  font-size: 30px;
+  color: #0f172a;
+}
+
+.print-report__meta {
+  font-size: 12px;
+  line-height: 1.8;
+  color: #334155;
+  text-align: right;
+}
+
+.print-report__summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0 24px;
+}
+
+.report-card {
+  border: 1px solid #dfe4ea;
+  border-radius: 12px;
+  background: #f8fafc;
+  padding: 12px 14px;
+}
+
+.report-card span {
+  display: block;
+  color: #475569;
+  font-size: 12px;
+  margin-bottom: 6px;
+}
+
+.report-card strong {
+  font-size: 18px;
+  color: #0f172a;
+}
+
+.print-report__section h2 {
+  margin: 0 0 12px;
+  font-size: 18px;
+}
+
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid #dfe4ea;
+  font-size: 12px;
+}
+
+.report-table th,
+.report-table td {
+  border: 1px solid #dfe4ea;
+  padding: 8px 7px;
+  vertical-align: top;
+  text-align: left;
+}
+
+.report-table th {
+  background: #f8fafc;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.report-quality {
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 4px;
+}
+
+.report-notes {
+  color: #475569;
+  line-height: 1.4;
+}
+
+.empty-report {
+  text-align: center;
+  color: var(--muted);
+  padding: 18px;
+}
+
+@page {
+  size: A4;
+  margin: 16mm;
+}
+
+@media print {
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  .no-print,
+  header,
+  nav,
+  main,
+  dialog,
+  .tab,
+  .view,
+  .card,
+  button,
+  input,
+  textarea,
+  select,
+  .notice {
+    display: none !important;
+  }
+
+  .print-report {
+    display: block !important;
+  }
+
+  .print-report__document {
+    padding: 0;
+    max-width: none;
+    box-shadow: none;
+  }
+
+  .print-report__header {
+    display: flex;
+  }
+
+  .print-report__summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+}
+
+/* --------------------------------------------------------------------------
    Utilities
    -------------------------------------------------------------------------- */
 .empty {
