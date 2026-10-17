@@ -334,6 +334,10 @@ test("sheep counter opens, counts ten sheep, restarts and cleans up on close", a
   assert.equal(sheepButton.focused, true);
 
   await sheepButton.click();
+  await dialog.dispatch("click", { target: dialog });
+  assert.equal(dialog.open, false);
+
+  await sheepButton.click();
   await app.context.document.dispatch("keydown", { key: "Escape" });
   assert.equal(dialog.open, false);
   assert.equal(app.context.document.listeners.get("keydown").length, 0);

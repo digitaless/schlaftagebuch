@@ -13,7 +13,7 @@ const SETTINGS_STORAGE_KEY = "schlaftagebuch.settings.v1";
 const DEFAULT_SETTINGS = { start: "23:00", end: "07:00" };
 const MAX_NOTE_LENGTH = 500;
 const SHEEP_COUNT = 10;
-const SHEEP_STEP_MS = 1500;
+const SHEEP_STEP_MS = 1950;
 
 // Labels for the 1–5 star rating (index = number of stars)
 const QUALITY_LABELS = ["", "gar nicht", "wenig", "mittelmäßig", "ziemlich", "sehr"];
@@ -1033,6 +1033,9 @@ function bindEvents() {
   dom.closeSheepButton.addEventListener("click", () => dom.sheepDialog.close());
   dom.restartSheepButton.addEventListener("click", startSheepCounting);
   dom.sheepDialog.addEventListener("close", closeSheepCounter);
+  dom.sheepDialog.addEventListener("click", (event) => {
+    if (event.target === dom.sheepDialog) dom.sheepDialog.close();
+  });
   dom.importButton.addEventListener("click", () => dom.importDialog.showModal());
   dom.importJsonButton.addEventListener("click", () => dom.importFile.click());
   dom.importFile.addEventListener("change", handleImportFile);
