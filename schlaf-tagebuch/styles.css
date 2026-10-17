@@ -72,6 +72,49 @@ h3 {
   margin: 0 0 10px;
 }
 
+.today-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.today-heading h2 {
+  margin-bottom: 15px;
+}
+
+.sheep-button {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 38px;
+  height: 34px;
+  padding: 5px;
+  margin-top: -5px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-alt);
+  color: var(--accent-text);
+  cursor: pointer;
+  transition: background-color 160ms ease, transform 160ms ease;
+}
+
+.sheep-button svg {
+  width: 27px;
+  height: 22px;
+}
+
+.sheep-button:hover {
+  background: var(--surface-active);
+  transform: translateY(-1px);
+}
+
+.sheep-button:focus-visible,
+.sheep-dialog button:focus-visible {
+  outline: 3px solid #93c5fd;
+  outline-offset: 3px;
+}
+
 /* --------------------------------------------------------------------------
    Header
    -------------------------------------------------------------------------- */
@@ -224,6 +267,224 @@ dialog {
 
 dialog::backdrop {
   background: rgba(15, 23, 42, 0.55);
+}
+
+.sheep-dialog {
+  width: min(720px, calc(100% - 24px));
+  max-height: calc(100% - 24px);
+  padding: 0;
+  border: 1px solid #33466a;
+  border-radius: 20px;
+  background: #111d38;
+  color: #edf3ff;
+  box-shadow: 0 24px 80px rgba(2, 6, 23, 0.45);
+}
+
+.sheep-dialog::backdrop {
+  background: rgba(4, 9, 23, 0.76);
+  backdrop-filter: blur(3px);
+}
+
+.sheep-dialog__content {
+  padding: 22px;
+}
+
+.sheep-dialog__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.sheep-dialog__header h2 {
+  margin: 0 0 5px;
+  color: #f8fafc;
+}
+
+.sheep-dialog__header p {
+  margin: 0;
+  color: #b8c5dc;
+  font-size: 14px;
+}
+
+.sheep-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #425477;
+  border-radius: 10px;
+  background: #1b2a49;
+  color: #f8fafc;
+  font: inherit;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.sheep-close:hover {
+  background: #293b5e;
+}
+
+.sheep-scene {
+  position: relative;
+  height: clamp(190px, 34vw, 260px);
+  margin: 20px 0 15px;
+  overflow: hidden;
+  border: 1px solid #354b73;
+  border-radius: 16px;
+  background: linear-gradient(180deg, #101b38 0%, #1c3155 74%, #263c5b 100%);
+  isolation: isolate;
+}
+
+.sheep-stars {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  fill: #e8efff;
+  opacity: 0.78;
+}
+
+.sheep-moon {
+  position: absolute;
+  top: 20px;
+  right: 11%;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #f6e9bb;
+  box-shadow: 0 0 28px rgba(246, 233, 187, 0.2);
+}
+
+.sheep-hill {
+  position: absolute;
+  right: -10%;
+  bottom: -70px;
+  left: -10%;
+  height: 135px;
+  border-radius: 50% 50% 0 0 / 30% 30% 0 0;
+}
+
+.sheep-hill--back {
+  bottom: -88px;
+  background: #213653;
+}
+
+.sheep-hill--front {
+  bottom: -104px;
+  background: #192d49;
+}
+
+.sheep-fence {
+  position: absolute;
+  z-index: 2;
+  bottom: 37px;
+  left: 50%;
+  display: flex;
+  justify-content: space-between;
+  width: 134px;
+  height: 61px;
+  padding: 0 8px;
+  border-top: 5px solid #d5c7a6;
+  border-bottom: 5px solid #d5c7a6;
+  transform: translateX(-50%);
+  filter: drop-shadow(0 2px 2px rgba(5, 12, 27, 0.25));
+}
+
+.sheep-fence span {
+  width: 5px;
+  height: 61px;
+  margin-top: -5px;
+  border-radius: 3px;
+  background: #c8b895;
+}
+
+.sheep-track {
+  position: absolute;
+  z-index: 3;
+  inset: 0;
+}
+
+.count-sheep {
+  position: absolute;
+  bottom: 32px;
+  left: 0;
+  width: 60px;
+  height: auto;
+  overflow: visible;
+  opacity: 0;
+}
+
+.count-sheep.is-jumping {
+  opacity: 1;
+  animation: sheep-hop 1.5s ease-in-out both;
+}
+
+@keyframes sheep-hop {
+  0% {
+    left: 0;
+    opacity: 0;
+    transform: translateY(0) rotate(0);
+  }
+
+  10% {
+    opacity: 1;
+  }
+
+  36% {
+    transform: translateY(-76px) rotate(-4deg);
+  }
+
+  58% {
+    transform: translateY(-76px) rotate(4deg);
+  }
+
+  90% {
+    opacity: 1;
+  }
+
+  100% {
+    left: calc(100% - 60px);
+    opacity: 1;
+    transform: translateY(0) rotate(0);
+  }
+}
+
+.sheep-dialog__footer {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  gap: 5px 12px;
+}
+
+.sheep-counter,
+.sheep-finale {
+  margin: 0;
+  font-weight: 700;
+}
+
+.sheep-counter {
+  color: #e7edf9;
+  font-variant-numeric: tabular-nums;
+}
+
+.sheep-finale {
+  grid-column: 1;
+  color: #f6e9bb;
+}
+
+.sheep-restart {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  border-color: #526486 !important;
+  background: #1b2a49 !important;
+  color: #f1f5f9 !important;
+}
+
+.sheep-restart:hover {
+  background: #293b5e !important;
 }
 
 .import-raw {
@@ -594,5 +855,50 @@ button.secondary {
   nav {
     padding-left: 8px;
     padding-right: 8px;
+  }
+
+  .sheep-dialog__content {
+    padding: 17px;
+  }
+
+  .sheep-scene {
+    height: 205px;
+    margin-top: 16px;
+  }
+
+  .sheep-dialog__footer {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+
+  .sheep-finale,
+  .sheep-restart {
+    grid-column: 1;
+    grid-row: auto;
+  }
+
+  .sheep-restart {
+    justify-self: start;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheep-button {
+    transition: none;
+  }
+
+  .count-sheep {
+    animation: none;
+    left: calc(var(--sheep-index) * 9%);
+    opacity: 0;
+    transform: none;
+  }
+
+  .count-sheep.is-jumping {
+    animation: none;
+  }
+
+  .count-sheep.is-counted {
+    opacity: 1;
   }
 }

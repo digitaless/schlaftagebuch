@@ -21,6 +21,9 @@ class FakeElement {
     this.listeners = new Map();
     this.classes = new Set();
     this.classList = {
+      add: (name) => this.classes.add(name),
+      remove: (name) => this.classes.delete(name),
+      contains: (name) => this.classes.has(name),
       toggle: (name, enabled) => {
         if (enabled) this.classes.add(name);
         else this.classes.delete(name);
@@ -33,6 +36,11 @@ class FakeElement {
     const callbacks = this.listeners.get(type) || [];
     callbacks.push(callback);
     this.listeners.set(type, callbacks);
+  }
+
+  removeEventListener(type, callback) {
+    const callbacks = this.listeners.get(type) || [];
+    this.listeners.set(type, callbacks.filter((listener) => listener !== callback));
   }
 
   async dispatch(type, extra = {}) {
@@ -55,6 +63,15 @@ class FakeElement {
 
   close() {
     this.open = false;
+    this.dispatch("close");
+  }
+
+  querySelectorAll(selector) {
+    return selector === ".count-sheep" ? this.sheepNodes || [] : [];
+  }
+
+  focus() {
+    this.focused = true;
   }
 }
 
@@ -112,7 +129,8 @@ function createApp({
   const ids = [
     "savedNotice", "todayTitle", "date", "bed", "wake", "awake", "sleepCalc",
     "effectiveCalc", "nap", "napMin", "medication", "medicationNameField",
-    "medicationName", "qualityText", "notes", "save",
+    "medicationName", "countSheep", "sheepDialog", "closeSheep", "restartSheep",
+    "sheepTrack", "sheepCounter", "sheepFinale", "qualityText", "notes", "save",
     "historyList", "statCards", "chart", "defaultStart", "defaultEnd",
     "saveSettings", "export", "exportPdf", "import", "clear", "importDialog", "importFile",
     "importJson", "importRawData", "restoreRaw", "cancelImport", "windowInfo", "printReport",
@@ -129,7 +147,24 @@ function createApp({
     return element;
   });
   const views = ["today", "history", "stats", "settings"].map((id) => new FakeElement(id));
+  const documentListeners = new Map();
   const document = {
+    activeElement: null,
+    listeners: documentListeners,
+    addEventListener: (type, callback) => {
+      const callbacks = documentListeners.get(type) || [];
+      callbacks.push(callback);
+      documentListeners.set(type, callbacks);
+    },
+    removeEventListener: (type, callback) => {
+      const callbacks = documentListeners.get(type) || [];
+      documentListeners.set(type, callbacks.filter((listener) => listener !== callback));
+    },
+    dispatch: async (type, event = {}) => {
+      await Promise.all((documentListeners.get(type) || []).map((callback) =>
+        callback({ ...event, preventDefault: () => { event.defaultPrevented = true; } })
+      ));
+    },
     getElementById: (id) => elements.get(id) || null,
     querySelectorAll: (selector) =>
       selector === ".star" ? stars : selector === ".tab" ? tabs : selector === ".view" ? views : [],
@@ -142,7 +177,7 @@ function createApp({
     alert: (message) => alerts.push(message),
     confirm: () => confirm,
     setTimeout: () => 1,
-    window: { print: () => {} },
+    window: { print: () => {}, matchMedia: () => ({ matches: false }) },
     Blob: class {
       constructor(parts, options) {
         this.parts = parts;
@@ -255,6 +290,53 @@ test("legacy entries without medication fields remain valid", () => {
     JSON.parse(vm.runInContext("JSON.stringify(validateEntry(entries[0]))", app.context)).medication,
     false
   );
+});
+
+test("sheep counter opens, counts ten sheep, restarts and cleans up on close", async () => {
+  const app = createApp();
+  const sheepButton = app.elements.get("countSheep");
+  const dialog = app.elements.get("sheepDialog");
+  const track = app.elements.get("sheepTrack");
+  track.sheepNodes = Array.from({ length: 10 }, (_, index) => {
+    const sheep = new FakeElement(`sheep-${index}`);
+    sheep.dataset.sheepIndex = String(index);
+    return sheep;
+  });
+  app.context.document.activeElement = sheepButton;
+
+  await sheepButton.click();
+  assert.equal(dialog.open, true);
+  assert.match(track.innerHTML, /data-sheep-index="9"/);
+  assert.equal(app.elements.get("sheepCounter").textContent, "Schafe gezählt: 0");
+
+  for (let index = 0; index < 10; index += 1) {
+    await track.dispatch("animationend", { target: track.sheepNodes[index] });
+  }
+
+  assert.equal(app.elements.get("sheepCounter").textContent, "Schafe gezählt: 10");
+  assert.equal(app.elements.get("sheepFinale").hidden, false);
+  assert.match(track.innerHTML, /data-sheep-index="9"/);
+  await track.dispatch("animationend", { target: track.sheepNodes[0] });
+  assert.equal(app.elements.get("sheepCounter").textContent, "Schafe gezählt: 11");
+  assert.equal(app.elements.get("sheepFinale").hidden, false);
+  await track.dispatch("animationend", { target: track.sheepNodes[1] });
+  assert.equal(app.elements.get("sheepCounter").textContent, "Schafe gezählt: 12");
+
+  await app.elements.get("restartSheep").click();
+  assert.equal(app.elements.get("sheepCounter").textContent, "Schafe gezählt: 0");
+  assert.equal(app.elements.get("sheepFinale").hidden, true);
+  assert.ok(track.listeners.get("animationend").length);
+
+  await app.elements.get("closeSheep").click();
+  assert.equal(dialog.open, false);
+  assert.equal(track.innerHTML, "");
+  assert.deepEqual(track.listeners.get("animationend"), []);
+  assert.equal(sheepButton.focused, true);
+
+  await sheepButton.click();
+  await app.context.document.dispatch("keydown", { key: "Escape" });
+  assert.equal(dialog.open, false);
+  assert.equal(app.context.document.listeners.get("keydown").length, 0);
 });
 
 test("malformed local JSON falls back safely and reports the problem", () => {

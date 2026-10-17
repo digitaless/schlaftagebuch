@@ -12,6 +12,8 @@ const SETTINGS_STORAGE_KEY = "schlaftagebuch.settings.v1";
 
 const DEFAULT_SETTINGS = { start: "23:00", end: "07:00" };
 const MAX_NOTE_LENGTH = 500;
+const SHEEP_COUNT = 10;
+const SHEEP_STEP_MS = 1500;
 
 // Labels for the 1–5 star rating (index = number of stars)
 const QUALITY_LABELS = ["", "gar nicht", "wenig", "mittelmäßig", "ziemlich", "sehr"];
@@ -131,6 +133,11 @@ let selectedQuality = 0;
 
 // Date of the entry being edited, or null when creating a new one
 let editingDate = null;
+let sheepCount = 0;
+let sheepAnimationEndHandler = null;
+let sheepReducedMotionTimeout = null;
+let sheepKeydownHandler = null;
+let sheepReturnFocus = null;
 
 /* --------------------------------------------------------------------------
    DOM helpers
@@ -154,6 +161,13 @@ const dom = {
   medicationSelect: byId("medication"),
   medicationNameField: byId("medicationNameField"),
   medicationName: byId("medicationName"),
+  countSheepButton: byId("countSheep"),
+  sheepDialog: byId("sheepDialog"),
+  closeSheepButton: byId("closeSheep"),
+  restartSheepButton: byId("restartSheep"),
+  sheepTrack: byId("sheepTrack"),
+  sheepCounter: byId("sheepCounter"),
+  sheepFinale: byId("sheepFinale"),
   qualityText: byId("qualityText"),
   notes: byId("notes"),
   saveButton: byId("save"),
@@ -385,6 +399,110 @@ function updateMedicationFields(copyPreviousMedication = false) {
       dom.medicationName.value = previousEntry.medicationName;
     }
   }
+}
+
+function createSheepMarkup() {
+  return Array.from({ length: SHEEP_COUNT }, (_, index) => `
+    <svg class="count-sheep" data-sheep-index="${index}" style="--sheep-index:${index};--sheep-delay:${index * 1.5}s" viewBox="0 0 74 56" aria-hidden="true" focusable="false">
+      <ellipse cx="34" cy="34" rx="24" ry="16" fill="#f8fafc"/>
+      <circle cx="18" cy="26" r="10" fill="#fff"/>
+      <circle cx="30" cy="20" r="11" fill="#fff"/>
+      <circle cx="44" cy="21" r="11" fill="#fff"/>
+      <circle cx="53" cy="29" r="9" fill="#fff"/>
+      <ellipse cx="57" cy="30" rx="9" ry="11" fill="#efd6c2"/>
+      <ellipse cx="50" cy="22" rx="4" ry="2.5" fill="#efd6c2" transform="rotate(-28 50 22)"/>
+      <circle cx="60" cy="28" r="1.5" fill="#26364f"/>
+      <path d="M59 34q3 2 5 0M21 44v8m12-6v6m15-9v9" fill="none" stroke="#d8dce4" stroke-width="3" stroke-linecap="round"/>
+    </svg>`).join("");
+}
+
+function updateSheepCount() {
+  dom.sheepCounter.textContent = `Schafe gezählt: ${sheepCount}`;
+  dom.sheepFinale.hidden = sheepCount < SHEEP_COUNT;
+}
+
+function cleanupSheepAnimation() {
+  if (sheepAnimationEndHandler) {
+    dom.sheepTrack.removeEventListener("animationend", sheepAnimationEndHandler);
+    sheepAnimationEndHandler = null;
+  }
+  if (sheepReducedMotionTimeout !== null) {
+    clearTimeout(sheepReducedMotionTimeout);
+    sheepReducedMotionTimeout = null;
+  }
+  dom.sheepTrack.innerHTML = "";
+}
+
+function cleanupSheepCounter() {
+  cleanupSheepAnimation();
+  if (sheepKeydownHandler) {
+    document.removeEventListener("keydown", sheepKeydownHandler);
+    sheepKeydownHandler = null;
+  }
+}
+
+function countReducedMotionSheep() {
+  sheepReducedMotionTimeout = null;
+  const sheep = dom.sheepTrack.querySelectorAll(".count-sheep")[sheepCount % SHEEP_COUNT];
+  sheep?.classList.add("is-counted");
+  sheepCount += 1;
+  updateSheepCount();
+  sheepReducedMotionTimeout = setTimeout(countReducedMotionSheep, SHEEP_STEP_MS);
+}
+
+function startNextSheepJump() {
+  const sheep = dom.sheepTrack.querySelectorAll(".count-sheep")[sheepCount % SHEEP_COUNT];
+  sheep?.classList.add("is-jumping");
+}
+
+function handleSheepJumpEnd(event) {
+  const sheepIndex = Number(event.target.dataset.sheepIndex);
+  if (
+    !Number.isInteger(sheepIndex) ||
+    sheepIndex !== sheepCount % SHEEP_COUNT ||
+    !event.target.classList.contains("is-jumping")
+  ) {
+    return;
+  }
+
+  event.target.classList.remove("is-jumping");
+  sheepCount += 1;
+  updateSheepCount();
+  startNextSheepJump();
+}
+
+function startSheepCounting() {
+  cleanupSheepAnimation();
+  sheepCount = 0;
+  updateSheepCount();
+  dom.sheepTrack.innerHTML = createSheepMarkup();
+
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+    sheepReducedMotionTimeout = setTimeout(countReducedMotionSheep, SHEEP_STEP_MS);
+    return;
+  }
+
+  sheepAnimationEndHandler = handleSheepJumpEnd;
+  dom.sheepTrack.addEventListener("animationend", sheepAnimationEndHandler);
+  startNextSheepJump();
+}
+
+function openSheepCounter() {
+  sheepReturnFocus = document.activeElement;
+  dom.sheepDialog.showModal();
+  startSheepCounting();
+  sheepKeydownHandler = (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    dom.sheepDialog.close();
+  };
+  document.addEventListener("keydown", sheepKeydownHandler);
+}
+
+function closeSheepCounter() {
+  cleanupSheepCounter();
+  sheepReturnFocus?.focus();
+  sheepReturnFocus = null;
 }
 
 /** Validates the form, then adds or replaces the entry for the chosen date. */
@@ -911,6 +1029,10 @@ function bindEvents() {
   dom.saveSettingsButton.addEventListener("click", handleSaveSettings);
   dom.exportButton.addEventListener("click", handleExport);
   dom.exportPdfButton.addEventListener("click", handleExportPdf);
+  dom.countSheepButton.addEventListener("click", openSheepCounter);
+  dom.closeSheepButton.addEventListener("click", () => dom.sheepDialog.close());
+  dom.restartSheepButton.addEventListener("click", startSheepCounting);
+  dom.sheepDialog.addEventListener("close", closeSheepCounter);
   dom.importButton.addEventListener("click", () => dom.importDialog.showModal());
   dom.importJsonButton.addEventListener("click", () => dom.importFile.click());
   dom.importFile.addEventListener("change", handleImportFile);
