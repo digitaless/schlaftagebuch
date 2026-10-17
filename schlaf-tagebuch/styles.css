@@ -6,15 +6,46 @@
    Design tokens
    -------------------------------------------------------------------------- */
 :root {
+  color-scheme: light dark;
   --bg: #f5f7fa;
   --card: #fff;
+  --control-bg: #fff;
   --text: #172033;
   --muted: #687386;
+  --label: #4b5563;
   --line: #dfe4ea;
+  --surface-alt: #f8fafc;
+  --surface-active: #e9edf2;
   --accent: #334155;
   --accent2: #475569;
+  --accent-text: #334155;
   --good: #15803d;
+  --notice-bg: #f0fdf4;
+  --notice-line: #bbf7d0;
+  --notice-text: #166534;
+  --star-empty: #cbd2db;
+  --chart-bar: #64748b;
   --radius: 18px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --control-bg: #0f172a;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --label: #cbd5e1;
+    --line: #334155;
+    --surface-alt: #273449;
+    --surface-active: #334155;
+    --accent-text: #cbd5e1;
+    --notice-bg: #052e16;
+    --notice-line: #166534;
+    --notice-text: #bbf7d0;
+    --star-empty: #64748b;
+    --chart-bar: #94a3b8;
+  }
 }
 
 /* --------------------------------------------------------------------------
@@ -92,7 +123,7 @@ nav button {
 }
 
 nav button.active {
-  background: #e9edf2;
+  background: var(--surface-active);
   color: var(--text);
   font-weight: 700;
 }
@@ -155,7 +186,7 @@ main {
 label {
   font-size: 13px;
   font-weight: 650;
-  color: #4b5563;
+  color: var(--label);
 }
 
 input,
@@ -166,7 +197,7 @@ textarea {
   padding: 12px;
   border: 1px solid var(--line);
   border-radius: 11px;
-  background: #fff;
+  background: var(--control-bg);
   color: var(--text);
 }
 
@@ -200,7 +231,7 @@ dialog::backdrop {
 .calc {
   font-size: 22px;
   font-weight: 750;
-  color: var(--accent);
+  color: var(--accent-text);
   padding-top: 7px;
 }
 
@@ -221,7 +252,7 @@ button.primary {
 
 button.secondary {
   border: 1px solid var(--line);
-  background: #fff;
+  background: var(--card);
   color: var(--text);
   font: inherit;
   padding: 10px 13px;
@@ -241,7 +272,7 @@ button.secondary {
   border: 0;
   background: transparent;
   font-size: 31px;
-  color: #cbd2db;
+  color: var(--star-empty);
   cursor: pointer;
   padding: 0;
 }
@@ -255,10 +286,10 @@ button.secondary {
    -------------------------------------------------------------------------- */
 .notice {
   padding: 12px 14px;
-  background: #f0fdf4;
-  border: 1px solid #bbf7d0;
+  background: var(--notice-bg);
+  border: 1px solid var(--notice-line);
   border-radius: 12px;
-  color: #166534;
+  color: var(--notice-text);
   margin-bottom: 14px;
 }
 
@@ -272,7 +303,7 @@ button.secondary {
 }
 
 .stat {
-  background: #f8fafc;
+  background: var(--surface-alt);
   border: 1px solid var(--line);
   border-radius: 14px;
   padding: 14px;
@@ -322,7 +353,7 @@ button.secondary {
 
 .bar {
   flex: 1;
-  background: #64748b;
+  background: var(--chart-bar);
   border-radius: 7px 7px 0 0;
   min-height: 3px;
   position: relative;
