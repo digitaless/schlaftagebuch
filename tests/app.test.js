@@ -309,18 +309,37 @@ test("sheep counter opens, counts ten sheep, restarts and cleans up on close", a
   assert.match(track.innerHTML, /data-sheep-index="9"/);
   assert.equal(app.elements.get("sheepCounter").textContent, "Schafe gezählt: 0");
 
-  for (let index = 0; index < 10; index += 1) {
-    await track.dispatch("animationend", { target: track.sheepNodes[index] });
+  const messages = [
+    "Und, schon müde?",
+    "Jetzt aber ab ins Bettchen!",
+    "Die Schäfchen sind schon müder als du.",
+    "Na los, Augen zu und gute Nacht!",
+    "Noch wach? Das kann doch nicht wahr sein.",
+    "Dein Kopfkissen vermisst dich.",
+    "Schnarch … äh, das warst nicht du, oder?",
+    "Selbst die Schäfchen fallen gleich um.",
+    "Morgen ist auch noch ein Tag. Hoffentlich.",
+    "Gute Nacht! Wir zählen dann mal ohne dich weiter.",
+    "Du hast gewonnen. Die Müdigkeit gibt auf. Gute Nacht!",
+  ];
+
+  for (let count = 1; count <= 120; count += 1) {
+    await track.dispatch("animationend", {
+      target: track.sheepNodes[(count - 1) % track.sheepNodes.length],
+    });
+    if (count % 10 === 0) {
+      assert.equal(app.elements.get("sheepCounter").textContent, `Schafe gezählt: ${count}`);
+      assert.equal(
+        app.elements.get("sheepFinale").textContent,
+        messages[Math.min(count / 10 - 1, messages.length - 1)]
+      );
+    }
   }
 
-  assert.equal(app.elements.get("sheepCounter").textContent, "Schafe gezählt: 10");
+  assert.equal(app.elements.get("sheepCounter").textContent, "Schafe gezählt: 120");
   assert.equal(app.elements.get("sheepFinale").hidden, false);
   assert.match(track.innerHTML, /data-sheep-index="9"/);
-  await track.dispatch("animationend", { target: track.sheepNodes[0] });
-  assert.equal(app.elements.get("sheepCounter").textContent, "Schafe gezählt: 11");
-  assert.equal(app.elements.get("sheepFinale").hidden, false);
-  await track.dispatch("animationend", { target: track.sheepNodes[1] });
-  assert.equal(app.elements.get("sheepCounter").textContent, "Schafe gezählt: 12");
+  assert.equal(app.elements.get("sheepFinale").textContent, messages.at(-1));
 
   await app.elements.get("restartSheep").click();
   assert.equal(app.elements.get("sheepCounter").textContent, "Schafe gezählt: 0");

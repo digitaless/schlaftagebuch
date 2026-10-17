@@ -14,6 +14,19 @@ const DEFAULT_SETTINGS = { start: "23:00", end: "07:00" };
 const MAX_NOTE_LENGTH = 500;
 const SHEEP_COUNT = 10;
 const SHEEP_STEP_MS = 1950;
+const SHEEP_MESSAGES = [
+  "Und, schon müde?",
+  "Jetzt aber ab ins Bettchen!",
+  "Die Schäfchen sind schon müder als du.",
+  "Na los, Augen zu und gute Nacht!",
+  "Noch wach? Das kann doch nicht wahr sein.",
+  "Dein Kopfkissen vermisst dich.",
+  "Schnarch … äh, das warst nicht du, oder?",
+  "Selbst die Schäfchen fallen gleich um.",
+  "Morgen ist auch noch ein Tag. Hoffentlich.",
+  "Gute Nacht! Wir zählen dann mal ohne dich weiter.",
+  "Du hast gewonnen. Die Müdigkeit gibt auf. Gute Nacht!",
+];
 
 // Labels for the 1–5 star rating (index = number of stars)
 const QUALITY_LABELS = ["", "gar nicht", "wenig", "mittelmäßig", "ziemlich", "sehr"];
@@ -419,6 +432,13 @@ function createSheepMarkup() {
 function updateSheepCount() {
   dom.sheepCounter.textContent = `Schafe gezählt: ${sheepCount}`;
   dom.sheepFinale.hidden = sheepCount < SHEEP_COUNT;
+  if (sheepCount >= SHEEP_COUNT) {
+    const messageIndex = Math.min(
+      Math.floor(sheepCount / SHEEP_COUNT) - 1,
+      SHEEP_MESSAGES.length - 1
+    );
+    dom.sheepFinale.textContent = SHEEP_MESSAGES[messageIndex];
+  }
 }
 
 function cleanupSheepAnimation() {
