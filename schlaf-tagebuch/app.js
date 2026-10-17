@@ -45,6 +45,8 @@ function validateEntry(value) {
     return null;
   }
   if (!Number.isInteger(value.quality) || value.quality < 1 || value.quality > 5) return null;
+  if (value.medication != null && typeof value.medication !== "boolean") return null;
+  if (value.medicationName != null && typeof value.medicationName !== "string") return null;
 
   const total = getDurationMinutes(value.bed, value.wake);
   const awake = value.awake == null ? 0 : Number(value.awake);
@@ -67,6 +69,9 @@ function validateEntry(value) {
   if (value.notes != null && typeof value.notes !== "string") return null;
   const notes = value.notes || "";
   if (notes.length > MAX_NOTE_LENGTH) return null;
+  const medication = value.medication ?? false;
+  const medicationName = medication ? (value.medicationName || "").trim() : "";
+  if (medicationName.length > MAX_NOTE_LENGTH || (medication && !medicationName)) return null;
 
   return {
     date: value.date,
@@ -80,6 +85,8 @@ function validateEntry(value) {
     nap,
     quality: value.quality,
     notes,
+    medication,
+    medicationName,
   };
 }
 
@@ -108,7 +115,7 @@ function validateEntries(value) {
 }
 
 // Saved diary entries, newest first. Each entry looks like:
-// { date, windowStart, windowEnd, bed, wake, total, effective, awake, nap, quality, notes }
+// { date, windowStart, windowEnd, bed, wake, total, effective, awake, nap, quality, notes, medication, medicationName }
 let entries = readStoredJSON(ENTRIES_STORAGE_KEY, [], validateEntries, "Einträge");
 
 // Default sleep window used to pre-fill new entries
@@ -144,6 +151,9 @@ const dom = {
   effectiveDurationOutput: byId("effectiveCalc"),
   napSelect: byId("nap"),
   napMinutes: byId("napMin"),
+  medicationSelect: byId("medication"),
+  medicationNameField: byId("medicationNameField"),
+  medicationName: byId("medicationName"),
   qualityText: byId("qualityText"),
   notes: byId("notes"),
   saveButton: byId("save"),
@@ -315,6 +325,10 @@ function resetForm(date = getPreviousNightISO()) {
   dom.napMinutes.value = 0;
   dom.napMinutes.disabled = true;
 
+  dom.medicationSelect.value = "0";
+  dom.medicationName.value = "";
+  updateMedicationFields();
+
   dom.notes.value = "";
   selectedQuality = 0;
 
@@ -336,6 +350,10 @@ function loadEntryIntoForm(entry) {
   dom.napMinutes.value = entry.nap || 0;
   dom.napMinutes.disabled = entry.nap <= 0;
 
+  dom.medicationSelect.value = entry.medication ? "1" : "0";
+  dom.medicationName.value = entry.medicationName || "";
+  updateMedicationFields();
+
   dom.notes.value = entry.notes || "";
   selectedQuality = entry.quality || 0;
 
@@ -343,6 +361,30 @@ function loadEntryIntoForm(entry) {
   updateCalculatedDurations();
   dom.todayTitle.textContent = "Eintrag bearbeiten";
   switchView("today");
+}
+
+function getPreviousDateISO(date) {
+  if (!isValidDate(date)) return null;
+  const previousDate = new Date(`${date}T00:00:00Z`);
+  previousDate.setUTCDate(previousDate.getUTCDate() - 1);
+  return previousDate.toISOString().slice(0, 10);
+}
+
+function updateMedicationFields(copyPreviousMedication = false) {
+  const hasMedication = dom.medicationSelect.value === "1";
+  dom.medicationNameField.hidden = !hasMedication;
+  dom.medicationName.required = hasMedication;
+  if (!hasMedication) {
+    dom.medicationName.value = "";
+    return;
+  }
+  if (copyPreviousMedication && !dom.medicationName.value.trim()) {
+    const previousDate = getPreviousDateISO(dom.date.value);
+    const previousEntry = entries.find((entry) => entry.date === previousDate);
+    if (previousEntry?.medication && previousEntry.medicationName) {
+      dom.medicationName.value = previousEntry.medicationName;
+    }
+  }
 }
 
 /** Validates the form, then adds or replaces the entry for the chosen date. */
@@ -389,6 +431,16 @@ function handleSaveEntry() {
     alert(`Notizen dürfen höchstens ${MAX_NOTE_LENGTH} Zeichen enthalten.`);
     return;
   }
+  const medication = dom.medicationSelect.value === "1";
+  const medicationName = medication ? dom.medicationName.value.trim() : "";
+  if (medication && !medicationName) {
+    alert("Bitte das eingenommene Medikament angeben.");
+    return;
+  }
+  if (medicationName.length > MAX_NOTE_LENGTH) {
+    alert(`Der Medikamentenname darf höchstens ${MAX_NOTE_LENGTH} Zeichen enthalten.`);
+    return;
+  }
 
   const targetEntry = entries.find((entry) => entry.date === date);
   if (targetEntry && date !== editingDate) {
@@ -409,6 +461,8 @@ function handleSaveEntry() {
     nap: napMinutes,
     quality: selectedQuality,
     notes: dom.notes.value,
+    medication,
+    medicationName,
   };
 
   const updatedEntries = entries.filter(
@@ -441,6 +495,9 @@ function renderHistoryEntry(entry) {
   });
   const stars = "★".repeat(entry.quality) + "☆".repeat(5 - entry.quality);
   const notesSuffix = entry.notes ? " · " + escapeHtml(entry.notes) : "";
+  const medicationSuffix = entry.medication
+    ? ` · Medikamente: ${escapeHtml(entry.medicationName)}`
+    : "";
 
   // Buttons carry the entry date in data-date; clicks are handled via delegation
   return `
@@ -455,7 +512,7 @@ function renderHistoryEntry(entry) {
           <div class="badge">${stars}</div>
         </div>
       </div>
-      <div class="small">Wach: ${entry.awake} min · Tagesschlaf: ${entry.nap} min${notesSuffix}</div>
+      <div class="small">Wach: ${entry.awake} min · Tagesschlaf: ${entry.nap} min${medicationSuffix}${notesSuffix}</div>
       <br>
       <button class="secondary" data-action="edit" data-date="${entry.date}">Bearbeiten</button>
       <button class="secondary danger" data-action="delete" data-date="${entry.date}">Löschen</button>
@@ -570,7 +627,12 @@ function renderPrintReport() {
     ? reportEntries
         .map((entry) => {
           const qualityText = `${"★".repeat(entry.quality)}${"☆".repeat(5 - entry.quality)} · ${getQualityLabel(entry.quality)}`;
-          const noteText = entry.notes ? escapeHtml(entry.notes) : "—";
+          const medicationText = entry.medication
+            ? `Medikamente: ${escapeHtml(entry.medicationName)}`
+            : "";
+          const noteText = [medicationText, entry.notes ? escapeHtml(entry.notes) : ""]
+            .filter(Boolean)
+            .join("<br>") || "—";
           return `
             <tr>
               <td>${formatReportDate(entry.date)}</td>
@@ -822,6 +884,11 @@ function bindEvents() {
     const hasNap = dom.napSelect.value !== "0";
     dom.napMinutes.disabled = !hasNap;
     if (!hasNap) dom.napMinutes.value = 0;
+  });
+
+  dom.medicationSelect.addEventListener("change", () => updateMedicationFields(true));
+  dom.date.addEventListener("change", () => {
+    if (dom.medicationSelect.value === "1") updateMedicationFields(true);
   });
 
   // Star rating

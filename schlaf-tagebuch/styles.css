@@ -178,6 +178,14 @@ main {
   gap: 7px;
 }
 
+.medication-field {
+  grid-column: 2;
+}
+
+[hidden] {
+  display: none !important;
+}
+
 /* Spans all columns of the parent grid */
 .full {
   grid-column: 1 / -1;
@@ -564,6 +572,10 @@ button.secondary {
   .grid,
   .row {
     grid-template-columns: 1fr;
+  }
+
+  .medication-field {
+    grid-column: auto;
   }
 
   .stats {

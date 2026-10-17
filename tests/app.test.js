@@ -111,7 +111,8 @@ function createApp({
 
   const ids = [
     "savedNotice", "todayTitle", "date", "bed", "wake", "awake", "sleepCalc",
-    "effectiveCalc", "nap", "napMin", "qualityText", "notes", "save",
+    "effectiveCalc", "nap", "napMin", "medication", "medicationNameField",
+    "medicationName", "qualityText", "notes", "save",
     "historyList", "statCards", "chart", "defaultStart", "defaultEnd",
     "saveSettings", "export", "exportPdf", "import", "clear", "importDialog", "importFile",
     "importJson", "importRawData", "restoreRaw", "cancelImport", "windowInfo", "printReport",
@@ -172,6 +173,8 @@ function fillEntryForm(app, date = "2026-10-09") {
   app.elements.get("awake").value = "30";
   app.elements.get("nap").value = "0";
   app.elements.get("napMin").value = "0";
+  app.elements.get("medication").value = "0";
+  app.elements.get("medicationName").value = "";
   app.elements.get("notes").value = "";
   vm.runInContext("selectedQuality = 4", app.context);
 }
@@ -212,6 +215,46 @@ test("invalid dates and durations are rejected without saving", async () => {
   app.elements.get("awake").value = "485";
   await app.elements.get("save").click();
   assert.deepEqual(storedEntries(app), []);
+});
+
+test("medication details are saved and carried forward when selected the next day", async () => {
+  const app = createApp();
+  fillEntryForm(app, "2026-10-08");
+  app.elements.get("medication").value = "1";
+  await app.elements.get("medication").dispatch("change");
+  assert.equal(app.elements.get("medicationNameField").hidden, false);
+  app.elements.get("medicationName").value = "Melatonin";
+  await app.elements.get("save").click();
+
+  assert.equal(storedEntries(app)[0].medication, true);
+  assert.equal(storedEntries(app)[0].medicationName, "Melatonin");
+  assert.equal(app.elements.get("historyList").innerHTML.includes("Melatonin"), true);
+
+  fillEntryForm(app, "2026-10-09");
+  app.elements.get("medication").value = "1";
+  await app.elements.get("medication").dispatch("change");
+  assert.equal(app.elements.get("medicationName").value, "Melatonin");
+  await app.elements.get("save").click();
+
+  assert.deepEqual(
+    storedEntries(app).map(({ date, medication, medicationName }) => ({
+      date,
+      medication,
+      medicationName,
+    })),
+    [
+      { date: "2026-10-09", medication: true, medicationName: "Melatonin" },
+      { date: "2026-10-08", medication: true, medicationName: "Melatonin" },
+    ]
+  );
+});
+
+test("legacy entries without medication fields remain valid", () => {
+  const app = createApp({ entries: [makeEntry("2026-10-08")] });
+  assert.deepEqual(
+    JSON.parse(vm.runInContext("JSON.stringify(validateEntry(entries[0]))", app.context)).medication,
+    false
+  );
 });
 
 test("malformed local JSON falls back safely and reports the problem", () => {
