@@ -64,6 +64,7 @@ function validateEntry(value) {
   if (value.medicationName != null && typeof value.medicationName !== "string") return null;
 
   const total = getDurationMinutes(value.bed, value.wake);
+  if (total <= 0) return null;
   const awake = value.awake == null ? 0 : Number(value.awake);
   const nap = value.nap == null ? 0 : Number(value.nap);
   if (
@@ -131,7 +132,8 @@ function validateEntries(value) {
 
 // Saved diary entries, newest first. Each entry looks like:
 // { date, windowStart, windowEnd, bed, wake, total, effective, awake, nap, quality, notes, medication, medicationName }
-let entries = readStoredJSON(ENTRIES_STORAGE_KEY, [], validateEntries, "Einträge");
+let entries = readStoredJSON(ENTRIES_STORAGE_KEY, [], validateEntries, "Einträge")
+  .sort((a, b) => b.date.localeCompare(a.date));
 
 // Default sleep window used to pre-fill new entries
 let settings = readStoredJSON(
@@ -319,6 +321,38 @@ function escapeHtml(text) {
 function averageOf(list, property) {
   const sum = list.reduce((total, entry) => total + (Number(entry[property]) || 0), 0);
   return sum / list.length;
+}
+
+function calculateSleepStatistics(nights) {
+  const qualityValues = nights
+    .map((entry) => Number(entry.quality))
+    .filter((quality) => Number.isFinite(quality) && quality >= 1 && quality <= 5);
+  return {
+    nights: nights.length,
+    averageTotal: nights.length ? Math.round(averageOf(nights, "total")) : null,
+    averageEffective: nights.length ? Math.round(averageOf(nights, "effective")) : null,
+    averageAwake: nights.length ? Math.round(averageOf(nights, "awake")) : null,
+    averageQuality: qualityValues.length
+      ? qualityValues.reduce((sum, quality) => sum + quality, 0) / qualityValues.length
+      : null,
+  };
+}
+
+function renderSleepDurationChart(nights) {
+  if (!nights.length) return "";
+  const chronological = nights.slice().reverse();
+  const maxMinutes = Math.max(...nights.map((entry) => entry.effective), 480);
+  const MAX_BAR_HEIGHT_PX = 150;
+  const barsHtml = chronological
+    .map((entry) => {
+      const heightPx = Math.max(2, (entry.effective / maxMinutes) * MAX_BAR_HEIGHT_PX);
+      return `<div class="bar" style="height:${heightPx}px"><span>${formatMinutes(entry.effective)}</span></div>`;
+    })
+    .join("");
+  const labelsHtml = chronological
+    .map((entry) => `<div>${entry.date.slice(8, 10)}.${entry.date.slice(5, 7)}</div>`)
+    .join("");
+  return `<div class="bar-wrap">${barsHtml}</div><div class="bar-labels">${labelsHtml}</div>`;
 }
 
 /* --------------------------------------------------------------------------
@@ -798,6 +832,7 @@ function handleHistoryClick(event) {
 
 function renderStats() {
   const recentNights = entries.slice(0, STATS_NIGHT_COUNT);
+  const statistics = calculateSleepStatistics(recentNights);
 
   if (!recentNights.length) {
     dom.statCards.innerHTML =
@@ -808,30 +843,12 @@ function renderStats() {
 
   // Summary tiles
   dom.statCards.innerHTML = `
-    <div class="stat"><span class="small">Ø Schlaf</span><b>${formatMinutes(Math.round(averageOf(recentNights, "effective")))}</b></div>
-    <div class="stat"><span class="small">Ø Qualität</span><b>${averageOf(recentNights, "quality").toFixed(1)} / 5</b></div>
-    <div class="stat"><span class="small">Ø Wachzeit</span><b>${Math.round(averageOf(recentNights, "awake"))} min</b></div>
+    <div class="stat"><span class="small">Ø Effektive Schlafdauer</span><b>${formatMinutes(statistics.averageEffective)}</b></div>
+    <div class="stat"><span class="small">Ø Qualität</span><b>${statistics.averageQuality.toFixed(1)} / 5</b></div>
+    <div class="stat"><span class="small">Ø Wachzeit</span><b>${statistics.averageAwake} min</b></div>
     <div class="stat"><span class="small">Nächte</span><b>${recentNights.length}</b></div>`;
 
-  // Bar chart, oldest night on the left. Scale is at least 8 h so short
-  // nights don't look full-height.
-  const chronological = recentNights.slice().reverse();
-  const maxMinutes = Math.max(...recentNights.map((e) => e.effective), 480);
-  const MAX_BAR_HEIGHT_PX = 150;
-
-  const barsHtml = chronological
-    .map((entry) => {
-      const heightPx = Math.max(2, (entry.effective / maxMinutes) * MAX_BAR_HEIGHT_PX);
-      return `<div class="bar" style="height:${heightPx}px"><span>${formatMinutes(entry.effective)}</span></div>`;
-    })
-    .join("");
-
-  // Axis labels as "DD.MM"
-  const labelsHtml = chronological
-    .map((entry) => `<div>${entry.date.slice(8, 10)}.${entry.date.slice(5, 7)}</div>`)
-    .join("");
-
-  dom.chart.innerHTML = `<div class="bar-wrap">${barsHtml}</div><div class="bar-labels">${labelsHtml}</div>`;
+  dom.chart.innerHTML = renderSleepDurationChart(recentNights);
 }
 
 /* --------------------------------------------------------------------------
@@ -855,10 +872,19 @@ function formatReportDateRange(entryList) {
 
 function renderPrintReport() {
   const reportEntries = [...entries].sort((a, b) => a.date.localeCompare(b.date));
-  const totalNights = reportEntries.length;
-  const avgSleep = totalNights ? formatMinutes(Math.round(averageOf(reportEntries, "effective"))) : "–";
-  const avgAwake = totalNights ? `${Math.round(averageOf(reportEntries, "awake"))} min` : "–";
-  const avgQuality = totalNights ? `${averageOf(reportEntries, "quality").toFixed(1)} / 5` : "–";
+  const recentNights = entries.slice(0, STATS_NIGHT_COUNT);
+  const statistics = calculateSleepStatistics(reportEntries);
+  const chartHtml = renderSleepDurationChart(recentNights);
+  const avgTotalSleep = statistics.averageTotal == null
+    ? "–"
+    : formatMinutes(statistics.averageTotal);
+  const avgEffectiveSleep = statistics.averageEffective == null
+    ? "–"
+    : formatMinutes(statistics.averageEffective);
+  const avgAwake = statistics.averageAwake == null ? "–" : `${statistics.averageAwake} min`;
+  const avgQuality = statistics.averageQuality == null
+    ? "–"
+    : `${statistics.averageQuality.toFixed(1)} / 5`;
   const exportDate = new Date().toLocaleDateString("de-CH", {
     day: "2-digit",
     month: "2-digit",
@@ -879,9 +905,9 @@ function renderPrintReport() {
             <tr>
               <td>${formatReportDate(entry.date)}</td>
               <td>${entry.bed}</td>
-              <td>nicht erfasst</td>
-              <td>${entry.awake} min</td>
               <td>${entry.wake}</td>
+              <td>${formatMinutes(entry.total)}</td>
+              <td>${entry.awake} min</td>
               <td>${formatMinutes(entry.effective)}</td>
               <td>
                 <div class="report-quality">${qualityText}</div>
@@ -891,51 +917,72 @@ function renderPrintReport() {
         })
         .join("")
     : `<tr><td colspan="7" class="empty-report">Noch keine Einträge vorhanden.</td></tr>`;
+  const chartSectionHtml = chartHtml
+    ? `
+      <section class="print-report__chart">
+        <h2>Effektive Schlafdauer – letzte ${recentNights.length} Nächte</h2>
+        ${chartHtml}
+      </section>`
+    : "";
 
   dom.printReport.innerHTML = `
     <div class="print-report__document">
       <header class="print-report__header">
         <div>
           <div class="print-report__eyebrow">Schlaf- und Erholungsübersicht</div>
-          <h1>Schlaftagebuch – Auswertung</h1>
+          <h1>Schlaftagebuch</h1>
         </div>
         <div class="print-report__meta">
           <div><strong>Zeitraum:</strong> ${formatReportDateRange(reportEntries)}</div>
           <div><strong>Erstellt am:</strong> ${exportDate}</div>
-          <div><strong>Festgelegtes Schlaffenster:</strong> ${settings.start} – ${settings.end} Uhr</div>
         </div>
       </header>
 
       <section class="print-report__summary">
         <div class="report-card">
-          <span>Ø Schlafdauer</span>
-          <strong>${avgSleep}</strong>
+          <span>Ø Gesamte Schlafdauer</span>
+          <strong>${avgTotalSleep}</strong>
         </div>
         <div class="report-card">
-          <span>Ø Einschlafzeit</span>
-          <strong>nicht erfasst</strong>
+          <span>Ø Effektive Schlafdauer</span>
+          <strong>${avgEffectiveSleep}</strong>
         </div>
         <div class="report-card">
           <span>Ø Wachzeit</span>
           <strong>${avgAwake}</strong>
         </div>
         <div class="report-card">
+          <span>Ø Qualität</span>
+          <strong>${avgQuality}</strong>
+        </div>
+        <div class="report-card">
           <span>Erfasste Nächte</span>
-          <strong>${totalNights}</strong>
+          <strong>${statistics.nights}</strong>
         </div>
       </section>
 
+      ${chartSectionHtml}
+
       <section class="print-report__section">
-        <h2>Einzelne Nächte</h2>
+        <h2>Einzelne Nächte im Berichtszeitraum</h2>
         <table class="report-table">
+          <colgroup>
+            <col style="width: 13%">
+            <col style="width: 15%">
+            <col style="width: 12%">
+            <col style="width: 15%">
+            <col style="width: 10%">
+            <col style="width: 15%">
+            <col style="width: 20%">
+          </colgroup>
           <thead>
             <tr>
               <th>Datum / Nacht</th>
               <th>Ins Bett gegangen</th>
-              <th>Eingeschlafen</th>
-              <th>Aufgewacht</th>
               <th>Aufgestanden</th>
               <th>Gesamte Schlafdauer</th>
+              <th>Wachzeit</th>
+              <th>Effektive Schlafdauer</th>
               <th>Schlafqualität / Befinden &amp; Notizen</th>
             </tr>
           </thead>
@@ -973,10 +1020,14 @@ function handleExport() {
   const blob = new Blob([json], { type: "application/json" });
 
   const link = document.createElement("a");
-  link.href = URL.createObjectURL(blob);
+  const objectUrl = URL.createObjectURL(blob);
+  link.href = objectUrl;
   link.download = "schlaftagebuch-export.json";
-  link.click();
-  URL.revokeObjectURL(link.href);
+  try {
+    link.click();
+  } finally {
+    setTimeout(() => URL.revokeObjectURL(objectUrl), 1000);
+  }
 }
 
 function parseImportData(rawData) {
@@ -1021,15 +1072,23 @@ function replaceWithImportedData(importedData) {
     return;
   }
 
+  let settingsUpdated = false;
+  let entriesUpdated = false;
   try {
     localStorage.setItem(SETTINGS_STORAGE_KEY, JSON.stringify(importedData.settings));
+    settingsUpdated = true;
     localStorage.setItem(ENTRIES_STORAGE_KEY, JSON.stringify(importedData.entries));
+    entriesUpdated = true;
   } catch (error) {
     try {
-      if (previousSettings == null) localStorage.removeItem(SETTINGS_STORAGE_KEY);
-      else localStorage.setItem(SETTINGS_STORAGE_KEY, previousSettings);
-      if (previousEntries == null) localStorage.removeItem(ENTRIES_STORAGE_KEY);
-      else localStorage.setItem(ENTRIES_STORAGE_KEY, previousEntries);
+      if (settingsUpdated) {
+        if (previousSettings == null) localStorage.removeItem(SETTINGS_STORAGE_KEY);
+        else localStorage.setItem(SETTINGS_STORAGE_KEY, previousSettings);
+      }
+      if (entriesUpdated) {
+        if (previousEntries == null) localStorage.removeItem(ENTRIES_STORAGE_KEY);
+        else localStorage.setItem(ENTRIES_STORAGE_KEY, previousEntries);
+      }
     } catch (rollbackError) {
       alert(`Import fehlgeschlagen und die vorherigen Daten konnten nicht vollständig wiederhergestellt werden. (${error.message}; ${rollbackError.message})`);
       return;
@@ -1081,7 +1140,7 @@ function handleRestoreRawData() {
 }
 
 function handleClearAllData() {
-  if (!confirm("Wirklich alle Schlafdaten löschen?")) return;
+  if (!confirm("Wirklich alle gespeicherten Schlafeinträge löschen? Deine Einstellungen bleiben erhalten.")) return;
 
   try {
     localStorage.removeItem(ENTRIES_STORAGE_KEY);
@@ -1090,6 +1149,7 @@ function handleClearAllData() {
     return;
   }
   entries = [];
+  resetForm();
   renderHistory();
   renderStats();
 }

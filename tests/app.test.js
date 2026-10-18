@@ -161,6 +161,10 @@ function createApp({
   const views = ["today", "history", "stats", "settings"].map((id) => new FakeElement(id));
   const documentListeners = new Map();
   const timers = [];
+  const createdElements = [];
+  const createdObjectUrls = [];
+  const revokedObjectUrls = [];
+  const confirmations = [];
   let nextTimerId = 0;
   const document = {
     activeElement: null,
@@ -182,14 +186,21 @@ function createApp({
     getElementById: (id) => elements.get(id) || null,
     querySelectorAll: (selector) =>
       selector === ".star" ? stars : selector === ".tab" ? tabs : selector === ".view" ? views : [],
-    createElement: (tag) => new FakeElement(tag),
+    createElement: (tag) => {
+      const element = new FakeElement(tag);
+      createdElements.push(element);
+      return element;
+    },
   };
   const alerts = [];
   const context = vm.createContext({
     document,
     localStorage: storage,
     alert: (message) => alerts.push(message),
-    confirm: () => confirm,
+    confirm: (message) => {
+      confirmations.push(message);
+      return confirm;
+    },
     setTimeout: (callback, delay) => {
       const timer = { id: nextTimerId, callback, delay, cancelled: false };
       nextTimerId += 1;
@@ -208,8 +219,12 @@ function createApp({
       }
     },
     URL: {
-      createObjectURL: () => "blob:test",
-      revokeObjectURL: () => {},
+      createObjectURL: (blob) => {
+        const url = `blob:test-${createdObjectUrls.length}`;
+        createdObjectUrls.push({ url, blob });
+        return url;
+      },
+      revokeObjectURL: (url) => revokedObjectUrls.push(url),
     },
     Date,
     Math,
@@ -237,6 +252,10 @@ function createApp({
       return true;
     },
     timers,
+    createdElements,
+    createdObjectUrls,
+    revokedObjectUrls,
+    confirmations,
   };
 }
 
@@ -270,7 +289,10 @@ test("editing a date moves the entry and removes its former date", async () => {
 test("editing onto an occupied date preserves both entries", async () => {
   const initial = [makeEntry("2026-10-08"), makeEntry("2026-10-09", { quality: 3 })];
   const app = createApp({ entries: initial });
-  vm.runInContext("loadEntryIntoForm(entries[0])", app.context);
+  vm.runInContext(
+    "loadEntryIntoForm(entries.find(entry => entry.date === '2026-10-08'))",
+    app.context
+  );
   fillEntryForm(app, "2026-10-09");
 
   await app.elements.get("save").click();
@@ -283,12 +305,113 @@ test("invalid dates and durations are rejected without saving", async () => {
   const app = createApp();
   fillEntryForm(app, "2026-02-30");
   await app.elements.get("save").click();
-  assert.deepEqual(storedEntries(app), []);
+  assert.equal(app.storage.getItem("schlaftagebuch.entries.v1"), "[]");
+  assert.deepEqual(
+    JSON.parse(vm.runInContext("JSON.stringify(entries)", app.context)),
+    []
+  );
 
   fillEntryForm(app);
   app.elements.get("awake").value = "485";
   await app.elements.get("save").click();
   assert.deepEqual(storedEntries(app), []);
+});
+
+test("time inputs remain native and calculate overnight durations", async () => {
+  for (const id of ["bed", "wake", "defaultStart", "defaultEnd"]) {
+    assert.match(htmlSource, new RegExp(`<input id="${id}" type="time"`));
+    assert.doesNotMatch(htmlSource.match(new RegExp(`<input id="${id}"[^>]*>`))?.[0] || "", /inputmode=/);
+  }
+  assert.doesNotMatch(cssSource, /appearance\s*:/);
+
+  const app = createApp();
+  app.elements.get("bed").value = "23:30";
+  app.elements.get("wake").value = "06:00";
+  app.elements.get("awake").value = "30";
+  await app.elements.get("wake").dispatch("input");
+  assert.equal(app.elements.get("sleepCalc").textContent, "6 h 30 min");
+  assert.equal(app.elements.get("effectiveCalc").textContent, "6 h 00 min");
+
+  app.elements.get("wake").value = "";
+  await app.elements.get("wake").dispatch("input");
+  assert.equal(app.elements.get("sleepCalc").textContent, "–");
+  assert.equal(app.elements.get("effectiveCalc").textContent, "–");
+});
+
+test("identical bed and wake times are rejected on save and import", async () => {
+  const app = createApp();
+  fillEntryForm(app);
+  app.elements.get("wake").value = "23:00";
+  await app.elements.get("save").click();
+  assert.deepEqual(storedEntries(app), []);
+  assert.match(app.alerts.at(-1), /dürfen nicht identisch sein/);
+
+  app.elements.get("importRawData").value = JSON.stringify({
+    entries: [makeEntry("2026-10-09", { bed: "07:00", wake: "07:00", total: 0, effective: 0 })],
+  });
+  await app.elements.get("restoreRaw").click();
+  assert.deepEqual(storedEntries(app), []);
+  assert.match(app.alerts.at(-1), /ungültige oder unvollständige Daten/);
+});
+
+test("stored entries are sorted newest first before history and seven-night statistics", () => {
+  const unsortedEntries = [
+    makeEntry("2026-10-01"),
+    makeEntry("2026-10-09"),
+    makeEntry("2026-10-05"),
+  ];
+  const app = createApp({ entries: unsortedEntries });
+
+  assert.deepEqual(
+    JSON.parse(vm.runInContext("JSON.stringify(entries.map(entry => entry.date))", app.context)),
+    ["2026-10-09", "2026-10-05", "2026-10-01"]
+  );
+  assert.ok(
+    app.elements.get("historyList").innerHTML.indexOf("09.10.2026") <
+      app.elements.get("historyList").innerHTML.indexOf("01.10.2026")
+  );
+});
+
+test("statistics use only the seven newest nights and handle empty records", () => {
+  const entries = Array.from({ length: 8 }, (_, index) => {
+    const day = String(index + 1).padStart(2, "0");
+    return makeEntry(`2026-10-${day}`, {
+      effective: index === 0 ? 0 : 420,
+      awake: index === 0 ? 480 : 60,
+    });
+  }).reverse();
+  const app = createApp({ entries });
+
+  assert.match(app.elements.get("statCards").innerHTML, /Ø Effektive Schlafdauer/);
+  assert.match(app.elements.get("statCards").innerHTML, /7 h 00 min/);
+  assert.match(app.elements.get("statCards").innerHTML, /<b>7<\/b>/);
+  assert.equal((app.elements.get("chart").innerHTML.match(/class="bar"/g) || []).length, 7);
+
+  const emptyApp = createApp();
+  assert.match(emptyApp.elements.get("statCards").innerHTML, /Noch keine Daten/);
+  assert.equal(emptyApp.elements.get("chart").innerHTML, "");
+});
+
+test("shared sleep statistics omit missing quality values from their average", () => {
+  const app = createApp();
+  const stats = vm.runInContext(
+    `calculateSleepStatistics([
+      { total: 480, effective: 420, awake: 60, quality: 4 },
+      { total: 420, effective: 360, awake: 60, quality: null },
+      { total: 420, effective: 360, awake: 60 }
+    ])`,
+    app.context
+  );
+
+  assert.equal(stats.nights, 3);
+  assert.equal(stats.averageTotal, 440);
+  assert.equal(stats.averageEffective, 380);
+  assert.equal(stats.averageAwake, 60);
+  assert.equal(stats.averageQuality, 4);
+  assert.equal(
+    vm.runInContext("calculateSleepStatistics([]).averageQuality", app.context),
+    null
+  );
 });
 
 test("medication details are saved and carried forward when selected the next day", async () => {
@@ -531,6 +654,30 @@ test("declining an import keeps the current diary unchanged", async () => {
   assert.deepEqual(storedEntries(app), initial);
 });
 
+test("failed import restores prior settings and leaves diary data unchanged", async () => {
+  const initialEntries = [makeEntry("2026-10-08")];
+  const initialSettings = { start: "22:30", end: "06:30" };
+  const app = createApp({
+    entries: initialEntries,
+    settings: initialSettings,
+    failSetFor: "schlaftagebuch.entries.v1",
+  });
+  app.elements.get("importRawData").value = JSON.stringify({
+    entries: [makeEntry("2026-10-09")],
+    settings: { start: "23:30", end: "07:30" },
+  });
+
+  await app.elements.get("restoreRaw").click();
+
+  assert.deepEqual(storedEntries(app), initialEntries);
+  assert.deepEqual(JSON.parse(app.storage.getItem("schlaftagebuch.settings.v1")), initialSettings);
+  assert.deepEqual(
+    JSON.parse(vm.runInContext("JSON.stringify(entries.map(entry => entry.date))", app.context)),
+    ["2026-10-08"]
+  );
+  assert.match(app.alerts.at(-1), /Die bisherigen Daten wurden beibehalten/);
+});
+
 test("history edit and delete actions are wired", async () => {
   const app = createApp({ entries: [makeEntry("2026-10-08")] });
   const editButton = new FakeElement("edit");
@@ -548,7 +695,8 @@ test("history edit and delete actions are wired", async () => {
 });
 
 test("settings, export, clear and navigation controls have working handlers", async () => {
-  const app = createApp({ entries: [makeEntry("2026-10-08")] });
+  const savedSettings = { start: "22:00", end: "06:00" };
+  const app = createApp({ entries: [makeEntry("2026-10-08")], settings: savedSettings });
   app.elements.get("defaultStart").value = "22:00";
   app.elements.get("defaultEnd").value = "06:00";
   await app.elements.get("saveSettings").click();
@@ -556,6 +704,23 @@ test("settings, export, clear and navigation controls have working handlers", as
 
   await app.elements.get("export").click();
   assert.equal(app.elements.get("export").clicked, true);
+  assert.equal(app.createdObjectUrls.length, 1);
+  assert.deepEqual(app.revokedObjectUrls, []);
+  const exportedJson = app.createdObjectUrls[0].blob.parts[0];
+  const exportedData = JSON.parse(exportedJson);
+  assert.deepEqual(exportedData.settings, savedSettings);
+  assert.deepEqual(exportedData.entries.map((entry) => entry.date), ["2026-10-08"]);
+  assert.deepEqual(
+    JSON.parse(vm.runInContext(`JSON.stringify(parseImportData(${JSON.stringify(exportedJson)}))`, app.context))
+      .entries.map((entry) => entry.date),
+    ["2026-10-08"]
+  );
+  const releaseTimer = app.timers.find((timer) => !timer.cancelled && !timer.fired);
+  assert.equal(releaseTimer.delay, 1000);
+  releaseTimer.fired = true;
+  releaseTimer.callback();
+  assert.deepEqual(app.revokedObjectUrls, [app.createdObjectUrls[0].url]);
+
   await app.elements.get("cancelImport").click();
   assert.equal(app.elements.get("importDialog").open, false);
   await app.tabs.find((tab) => tab.dataset.view === "history").click();
@@ -563,10 +728,24 @@ test("settings, export, clear and navigation controls have working handlers", as
 
   await app.elements.get("clear").click();
   assert.equal(app.storage.getItem("schlaftagebuch.entries.v1"), null);
+  assert.deepEqual(JSON.parse(app.storage.getItem("schlaftagebuch.settings.v1")), savedSettings);
+  assert.match(app.confirmations.at(-1), /Schlafeinträge löschen/);
+  assert.match(app.confirmations.at(-1), /Einstellungen bleiben erhalten/);
+  assert.match(htmlSource, /id="clear">Alle Einträge löschen/);
 });
 
 test("PDF export renders a printable report and triggers browser print", async () => {
-  const app = createApp({ entries: [makeEntry("2026-10-08"), makeEntry("2026-10-09")] });
+  const app = createApp({
+    entries: Array.from({ length: 10 }, (_, index) => {
+      const day = String(index + 1).padStart(2, "0");
+      return makeEntry(`2026-10-${day}`, {
+        total: 480 - index * 5,
+        effective: 420 - index * 5,
+        awake: 60,
+        quality: index % 5 + 1,
+      });
+    }),
+  });
   let printCalled = false;
   app.context.window.print = () => {
     printCalled = true;
@@ -575,6 +754,85 @@ test("PDF export renders a printable report and triggers browser print", async (
   await app.elements.get("exportPdf").click();
 
   assert.equal(printCalled, true);
-  assert.match(app.elements.get("printReport").innerHTML, /Schlaftagebuch – Auswertung/);
-  assert.match(app.elements.get("printReport").innerHTML, /Zeitraum:/);
+  const report = app.elements.get("printReport").innerHTML;
+  assert.match(report, /<h1>Schlaftagebuch<\/h1>/);
+  assert.match(report, /Zeitraum:/);
+  assert.match(report, /Ø Gesamte Schlafdauer<\/span>\s*<strong>7 h 38 min/);
+  assert.match(report, /Ø Effektive Schlafdauer<\/span>\s*<strong>6 h 38 min/);
+  assert.match(report, /Ø Qualität<\/span>\s*<strong>3\.0 \/ 5/);
+  assert.match(report, /Erfasste Nächte<\/span>\s*<strong>10/);
+  assert.match(report, /<th>Ins Bett gegangen<\/th>\s*<th>Aufgestanden<\/th>\s*<th>Gesamte Schlafdauer<\/th>\s*<th>Wachzeit<\/th>\s*<th>Effektive Schlafdauer<\/th>/);
+  assert.doesNotMatch(report, /Eingeschlafen|Einschlafzeit|nicht erfasst/);
+  assert.match(report, /Effektive Schlafdauer – letzte 7 Nächte/);
+  const reportRows = [...report.matchAll(/<tr>([\s\S]*?)<\/tr>/g)].map(([, row]) => row);
+  assert.match(reportRows[1], /<td>23:00<\/td>\s*<td>07:00<\/td>\s*<td>8 h 00 min<\/td>\s*<td>60 min<\/td>\s*<td>7 h 00 min<\/td>/);
+  assert.match(reportRows[10], /<td>7 h 15 min<\/td>\s*<td>60 min<\/td>\s*<td>6 h 15 min<\/td>/);
+  assert.equal((report.match(/class="bar"/g) || []).length, 7);
+  assert.match(cssSource, /size:\s*A4 landscape/);
+  assert.match(cssSource, /table-layout:\s*fixed/);
+  assert.match(cssSource, /break-inside:\s*avoid/);
+  assert.match(cssSource, /table-header-group/);
+  assert.match(cssSource, /\.print-report__document\s*\{[^}]*color:\s*#172033/s);
+  assert.match(cssSource, /\.print-report__header\s*\{[^}]*position:\s*static/s);
+});
+
+test("empty PDF report shows dashes instead of invalid summary values and omits its chart", async () => {
+  const app = createApp();
+  await app.elements.get("exportPdf").click();
+
+  const report = app.elements.get("printReport").innerHTML;
+  assert.match(report, /Keine Einträge/);
+  assert.match(report, /Ø Gesamte Schlafdauer<\/span>\s*<strong>–/);
+  assert.match(report, /Ø Effektive Schlafdauer<\/span>\s*<strong>–/);
+  assert.match(report, /Ø Wachzeit<\/span>\s*<strong>–/);
+  assert.match(report, /Ø Qualität<\/span>\s*<strong>–/);
+  assert.match(report, /colspan="7"/);
+  assert.doesNotMatch(report, /class="bar"/);
+  assert.doesNotMatch(report, /letzte 0 Nächte/);
+});
+
+test("single-night PDF reports its averages, chronological range and one chart bar", async () => {
+  const app = createApp({
+    entries: [makeEntry("2026-10-18", { total: 465, effective: 430, awake: 35, quality: 5 })],
+  });
+  await app.elements.get("exportPdf").click();
+
+  const report = app.elements.get("printReport").innerHTML;
+  assert.match(report, /Ø Gesamte Schlafdauer<\/span>\s*<strong>7 h 45 min/);
+  assert.match(report, /Ø Effektive Schlafdauer<\/span>\s*<strong>7 h 10 min/);
+  assert.match(report, /Ø Wachzeit<\/span>\s*<strong>35 min/);
+  assert.match(report, /Ø Qualität<\/span>\s*<strong>5\.0 \/ 5/);
+  assert.match(report, /letzte 1 Nächte/);
+  assert.equal((report.match(/class="bar"/g) || []).length, 1);
+  assert.match(report, /18\.10\.2026 – 18\.10\.2026/);
+});
+
+test("clearing sleep entries requires confirmation and preserves entries when declined", async () => {
+  const initial = [makeEntry("2026-10-08")];
+  const settings = { start: "22:30", end: "06:30" };
+  const app = createApp({ entries: initial, settings, confirm: false });
+
+  await app.elements.get("clear").click();
+
+  assert.deepEqual(storedEntries(app), initial);
+  assert.deepEqual(JSON.parse(app.storage.getItem("schlaftagebuch.settings.v1")), settings);
+});
+
+test("confirmed clearing removes entries, preserves settings and resets an edited form", async () => {
+  const initial = [makeEntry("2026-10-08")];
+  const settings = { start: "22:30", end: "06:30" };
+  const app = createApp({ entries: initial, settings });
+  vm.runInContext("loadEntryIntoForm(entries[0])", app.context);
+  assert.equal(app.elements.get("bed").value, "23:00");
+
+  await app.elements.get("clear").click();
+
+  assert.equal(app.storage.getItem("schlaftagebuch.entries.v1"), null);
+  assert.deepEqual(
+    JSON.parse(vm.runInContext("JSON.stringify(entries)", app.context)),
+    []
+  );
+  assert.deepEqual(JSON.parse(app.storage.getItem("schlaftagebuch.settings.v1")), settings);
+  assert.equal(app.elements.get("bed").value, "");
+  assert.equal(vm.runInContext("editingDate", app.context), null);
 });
