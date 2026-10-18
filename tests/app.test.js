@@ -8,6 +8,14 @@ const appSource = fs.readFileSync(
   path.join(__dirname, "../schlaf-tagebuch/app.js"),
   "utf8"
 );
+const htmlSource = fs.readFileSync(
+  path.join(__dirname, "../schlaf-tagebuch/index.html"),
+  "utf8"
+);
+const cssSource = fs.readFileSync(
+  path.join(__dirname, "../schlaf-tagebuch/styles.css"),
+  "utf8"
+);
 
 class FakeElement {
   constructor(id = "") {
@@ -20,6 +28,7 @@ class FakeElement {
     this.dataset = {};
     this.listeners = new Map();
     this.classes = new Set();
+    this.hidden = false;
     this.classList = {
       add: (name) => this.classes.add(name),
       remove: (name) => this.classes.delete(name),
@@ -63,7 +72,7 @@ class FakeElement {
 
   close() {
     this.open = false;
-    this.dispatch("close");
+    return this.dispatch("close");
   }
 
   querySelectorAll(selector) {
@@ -118,6 +127,7 @@ function createApp({
   rawEntries,
   failSetFor = null,
   confirm = true,
+  prefersReducedMotion = false,
 } = {}) {
   const storage = new MemoryStorage({
     "schlaftagebuch.entries.v1":
@@ -130,7 +140,9 @@ function createApp({
     "savedNotice", "todayTitle", "date", "bed", "wake", "awake", "sleepCalc",
     "effectiveCalc", "nap", "napMin", "medication", "medicationNameField",
     "medicationName", "countSheep", "sheepDialog", "closeSheep", "restartSheep",
-    "sheepTrack", "sheepCounter", "sheepFinale", "qualityText", "notes", "save",
+    "sheepTrack", "sheepCounter", "sheepFinale", "wakeSheep", "morningSheepDialog",
+    "closeMorningSheep", "restartMorningSheep", "doneMorningSheep", "morningScene",
+    "morningMessage", "morningFinale", "qualityText", "notes", "save",
     "historyList", "statCards", "chart", "defaultStart", "defaultEnd",
     "saveSettings", "export", "exportPdf", "import", "clear", "importDialog", "importFile",
     "importJson", "importRawData", "restoreRaw", "cancelImport", "windowInfo", "printReport",
@@ -148,6 +160,8 @@ function createApp({
   });
   const views = ["today", "history", "stats", "settings"].map((id) => new FakeElement(id));
   const documentListeners = new Map();
+  const timers = [];
+  let nextTimerId = 0;
   const document = {
     activeElement: null,
     listeners: documentListeners,
@@ -176,8 +190,17 @@ function createApp({
     localStorage: storage,
     alert: (message) => alerts.push(message),
     confirm: () => confirm,
-    setTimeout: () => 1,
-    window: { print: () => {}, matchMedia: () => ({ matches: false }) },
+    setTimeout: (callback, delay) => {
+      const timer = { id: nextTimerId, callback, delay, cancelled: false };
+      nextTimerId += 1;
+      timers.push(timer);
+      return timer.id;
+    },
+    clearTimeout: (id) => {
+      const timer = timers.find((candidate) => candidate.id === id);
+      if (timer) timer.cancelled = true;
+    },
+    window: { print: () => {}, matchMedia: () => ({ matches: prefersReducedMotion }) },
     Blob: class {
       constructor(parts, options) {
         this.parts = parts;
@@ -198,7 +221,23 @@ function createApp({
     Error,
   });
   vm.runInContext(appSource, context, { filename: "app.js" });
-  return { context, elements, alerts, storage, stars, tabs, views };
+  return {
+    context,
+    elements,
+    alerts,
+    storage,
+    stars,
+    tabs,
+    views,
+    runNextTimeout: () => {
+      const timer = timers.find((candidate) => !candidate.cancelled && !candidate.fired);
+      if (!timer) return false;
+      timer.fired = true;
+      timer.callback();
+      return true;
+    },
+    timers,
+  };
 }
 
 function fillEntryForm(app, date = "2026-10-09") {
@@ -360,6 +399,72 @@ test("sheep counter opens, counts ten sheep, restarts and cleans up on close", a
   await app.context.document.dispatch("keydown", { key: "Escape" });
   assert.equal(dialog.open, false);
   assert.equal(app.context.document.listeners.get("keydown").length, 0);
+});
+
+test("morning sheep stays on Today, runs through its phases, restarts and restores focus", async () => {
+  const todayMarkup = htmlSource.match(/<section id="today"[\s\S]*?<\/section>/)?.[0] || "";
+  assert.match(todayMarkup, /id="countSheep"/);
+  assert.match(todayMarkup, /id="wakeSheep" aria-label="Schaf aufwecken"/);
+  assert.doesNotMatch(htmlSource.match(/<section id="(?:history|stats|settings)"[\s\S]*?<\/section>/)?.[0] || "", /id="wakeSheep"/);
+  assert.match(cssSource, /@media \(prefers-reduced-motion: reduce\)/);
+  assert.match(cssSource, /\.morning-scene--ready \.morning-eyes-closed/);
+
+  const app = createApp();
+  const button = app.elements.get("wakeSheep");
+  const dialog = app.elements.get("morningSheepDialog");
+  const closeButton = app.elements.get("closeMorningSheep");
+  const scene = app.elements.get("morningScene");
+  const message = app.elements.get("morningMessage");
+  app.context.document.activeElement = button;
+
+  await button.click();
+  assert.equal(dialog.open, true);
+  assert.equal(closeButton.focused, true);
+  assert.equal(message.textContent, "Nur noch fünf Minuten …");
+  assert.equal(scene.classList.contains("morning-scene--sleeping"), true);
+  assert.equal(app.timers.at(-1).delay, 3000);
+
+  for (const expectedState of [
+    "waking",
+    "sitting",
+    "flopping",
+    "negotiating",
+    "standing",
+    "ready",
+  ]) {
+    assert.equal(app.runNextTimeout(), true);
+    assert.equal(scene.classList.contains(`morning-scene--${expectedState}`), true);
+  }
+
+  assert.equal(app.elements.get("morningFinale").hidden, false);
+  assert.match(htmlSource, /Aufgestanden\. Das reicht für den Anfang\./);
+  assert.equal(app.elements.get("restartMorningSheep").hidden, false);
+  assert.equal(app.elements.get("doneMorningSheep").hidden, false);
+
+  await app.elements.get("restartMorningSheep").click();
+  assert.equal(message.textContent, "Nur noch fünf Minuten …");
+  assert.equal(app.timers.at(-1).delay, 3000);
+  assert.equal(app.elements.get("morningFinale").hidden, true);
+  assert.equal(app.elements.get("doneMorningSheep").hidden, true);
+
+  await closeButton.click();
+  assert.equal(dialog.open, false);
+  assert.equal(button.focused, true);
+  assert.equal(scene.classList.contains("morning-scene--sleeping"), false);
+  assert.equal(app.timers.filter((timer) => !timer.cancelled && !timer.fired).length, 0);
+
+  await button.click();
+  await app.context.document.dispatch("keydown", { key: "Escape" });
+  assert.equal(dialog.open, false);
+  assert.equal(app.context.document.listeners.get("keydown").length, 0);
+});
+
+test("morning sheep keeps readable pauses with reduced motion", async () => {
+  const app = createApp({ prefersReducedMotion: true });
+  await app.elements.get("wakeSheep").click();
+
+  assert.equal(app.timers.at(-1).delay, 1800);
+  assert.equal(app.elements.get("morningMessage").textContent, "Nur noch fünf Minuten …");
 });
 
 test("malformed local JSON falls back safely and reports the problem", () => {

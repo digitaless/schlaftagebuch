@@ -151,6 +151,34 @@ let sheepAnimationEndHandler = null;
 let sheepReducedMotionTimeout = null;
 let sheepKeydownHandler = null;
 let sheepReturnFocus = null;
+let morningSheepTimeout = null;
+let morningSheepReturnFocus = null;
+let morningSheepKeydownHandler = null;
+
+const MORNING_SHEEP_PHASES = [
+  { state: "sleeping", message: "Nur noch fünf Minuten …", delay: 3000 },
+  { state: "waking", message: "Ich bin noch gar nicht richtig wach.", delay: 3000 },
+  {
+    state: "sitting",
+    message: "Zählt das schon als aufgestanden, wenn ich sitze?",
+    delay: 3400,
+  },
+  {
+    state: "flopping",
+    message: "Können wir den Morgen nicht einfach überspringen?",
+    delay: 3000,
+  },
+  {
+    state: "negotiating",
+    message: "Ich verhandle hiermit eine Verlängerung der Nacht.",
+    delay: 3400,
+  },
+  { state: "standing", message: "Na gut. Aber nur, weil du es bist.", delay: 3300 },
+  { state: "ready", message: "Okay, okay. Wir sind ja schon wach!", delay: 0 },
+];
+const MORNING_SHEEP_REDUCED_MOTION_DELAY_MS = 1800;
+const MORNING_SHEEP_STATES = MORNING_SHEEP_PHASES.map(({ state }) => state);
+let morningSheepPhase = 0;
 
 /* --------------------------------------------------------------------------
    DOM helpers
@@ -181,6 +209,14 @@ const dom = {
   sheepTrack: byId("sheepTrack"),
   sheepCounter: byId("sheepCounter"),
   sheepFinale: byId("sheepFinale"),
+  wakeSheepButton: byId("wakeSheep"),
+  morningSheepDialog: byId("morningSheepDialog"),
+  closeMorningSheepButton: byId("closeMorningSheep"),
+  restartMorningSheepButton: byId("restartMorningSheep"),
+  doneMorningSheepButton: byId("doneMorningSheep"),
+  morningScene: byId("morningScene"),
+  morningMessage: byId("morningMessage"),
+  morningFinale: byId("morningFinale"),
   qualityText: byId("qualityText"),
   notes: byId("notes"),
   saveButton: byId("save"),
@@ -523,6 +559,74 @@ function closeSheepCounter() {
   cleanupSheepCounter();
   sheepReturnFocus?.focus();
   sheepReturnFocus = null;
+}
+
+function clearMorningSheepTimeout() {
+  if (morningSheepTimeout !== null) {
+    clearTimeout(morningSheepTimeout);
+    morningSheepTimeout = null;
+  }
+}
+
+function showMorningSheepPhase(phaseIndex) {
+  const phase = MORNING_SHEEP_PHASES[phaseIndex];
+  MORNING_SHEEP_STATES.forEach((state) => {
+    dom.morningScene.classList.toggle(`morning-scene--${state}`, state === phase.state);
+  });
+  dom.morningMessage.textContent = phase.message;
+
+  if (phase.state === "ready") {
+    dom.morningFinale.hidden = false;
+    dom.restartMorningSheepButton.hidden = false;
+    dom.doneMorningSheepButton.hidden = false;
+    return;
+  }
+
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  morningSheepTimeout = setTimeout(() => {
+    morningSheepTimeout = null;
+    morningSheepPhase += 1;
+    showMorningSheepPhase(morningSheepPhase);
+  }, reducedMotion ? MORNING_SHEEP_REDUCED_MOTION_DELAY_MS : phase.delay);
+}
+
+function startMorningSheep() {
+  clearMorningSheepTimeout();
+  morningSheepPhase = 0;
+  dom.morningFinale.hidden = true;
+  dom.restartMorningSheepButton.hidden = true;
+  dom.doneMorningSheepButton.hidden = true;
+  showMorningSheepPhase(morningSheepPhase);
+}
+
+function openMorningSheep() {
+  morningSheepReturnFocus = document.activeElement;
+  dom.morningSheepDialog.showModal();
+  dom.closeMorningSheepButton.focus();
+  startMorningSheep();
+  morningSheepKeydownHandler = (event) => {
+    if (event.key !== "Escape") return;
+    event.preventDefault();
+    dom.morningSheepDialog.close();
+  };
+  document.addEventListener("keydown", morningSheepKeydownHandler);
+}
+
+function closeMorningSheep() {
+  clearMorningSheepTimeout();
+  if (morningSheepKeydownHandler) {
+    document.removeEventListener("keydown", morningSheepKeydownHandler);
+    morningSheepKeydownHandler = null;
+  }
+  MORNING_SHEEP_STATES.forEach((state) => {
+    dom.morningScene.classList.toggle(`morning-scene--${state}`, false);
+  });
+  dom.morningMessage.textContent = "";
+  dom.morningFinale.hidden = true;
+  dom.restartMorningSheepButton.hidden = true;
+  dom.doneMorningSheepButton.hidden = true;
+  morningSheepReturnFocus?.focus();
+  morningSheepReturnFocus = null;
 }
 
 /** Validates the form, then adds or replaces the entry for the chosen date. */
@@ -1050,11 +1154,19 @@ function bindEvents() {
   dom.exportButton.addEventListener("click", handleExport);
   dom.exportPdfButton.addEventListener("click", handleExportPdf);
   dom.countSheepButton.addEventListener("click", openSheepCounter);
+  dom.wakeSheepButton.addEventListener("click", openMorningSheep);
   dom.closeSheepButton.addEventListener("click", () => dom.sheepDialog.close());
   dom.restartSheepButton.addEventListener("click", startSheepCounting);
   dom.sheepDialog.addEventListener("close", closeSheepCounter);
   dom.sheepDialog.addEventListener("click", (event) => {
     if (event.target === dom.sheepDialog) dom.sheepDialog.close();
+  });
+  dom.closeMorningSheepButton.addEventListener("click", () => dom.morningSheepDialog.close());
+  dom.restartMorningSheepButton.addEventListener("click", startMorningSheep);
+  dom.doneMorningSheepButton.addEventListener("click", () => dom.morningSheepDialog.close());
+  dom.morningSheepDialog.addEventListener("close", closeMorningSheep);
+  dom.morningSheepDialog.addEventListener("click", (event) => {
+    if (event.target === dom.morningSheepDialog) dom.morningSheepDialog.close();
   });
   dom.importButton.addEventListener("click", () => dom.importDialog.showModal());
   dom.importJsonButton.addEventListener("click", () => dom.importFile.click());
