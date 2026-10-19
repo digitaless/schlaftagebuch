@@ -14,6 +14,8 @@ Lokale Web-App zum Führen eines Schlaftagebuchs, komplett ohne Backend. Die Dat
 - JSON-Export und -Import zur Datensicherung
 - Direkter PDF-Export im A4-Querformat, unabhängig vom mobilen Druckdialog
 - Kurze Einführung beim ersten Besuch mit lokal gespeicherter Anzeigeoption
+- Benutzeroberfläche und PDF-Bericht auf Deutsch, Französisch oder Englisch
+- Sprachauswahl lokal gespeichert und unabhängig von Schlafdaten und Sicherungen
 
 ## Entwicklung
 

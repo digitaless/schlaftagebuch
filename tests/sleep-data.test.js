@@ -9,6 +9,7 @@ import {
   validateEntries,
   validateEntry,
 } from "../src/sleep-data.js";
+import { formatDate, formatNumber, getTranslationKeys, translate } from "../src/i18n.js";
 
 const validEntry = {
   date: "2026-10-18",
@@ -97,4 +98,26 @@ test("chart data is chronological and uses the same minimum scale as the statist
   assert.deepEqual(data.chronological.map(({ date }) => date), ["2026-10-18", "2026-10-19"]);
   assert.equal(data.maxMinutes, 480);
   assert.equal(getSleepDurationChartData([]).maxMinutes, 480);
+});
+
+test("translation dictionaries have matching keys and fall back to German", () => {
+  const germanKeys = getTranslationKeys("de").sort();
+  assert.deepEqual(getTranslationKeys("fr").sort(), germanKeys);
+  assert.deepEqual(getTranslationKeys("en").sort(), germanKeys);
+  assert.equal(translate("fr", "intro.title"), "Bienvenue dans votre journal du sommeil");
+  assert.equal(translate("fr", "missing.key"), "missing.key");
+  assert.equal(
+    translate("en", "error.notesLength", { max: 500 }),
+    "Notes can be no longer than 500 characters."
+  );
+});
+
+test("date, number and duration formatting use the selected locale without changing values", () => {
+  const date = new Date("2026-10-19T12:00:00Z");
+  assert.equal(formatDate(date, "de"), "19.10.2026");
+  assert.equal(formatDate(date, "fr"), "19/10/2026");
+  assert.equal(formatDate(date, "en"), "10/19/2026");
+  assert.equal(formatNumber(1234.5, "de"), "1'234.5");
+  assert.equal(formatMinutes(425, "fr"), "7 h 05 min");
+  assert.equal(formatMinutes(425, "en"), "7 h 05 min");
 });

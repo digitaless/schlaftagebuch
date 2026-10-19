@@ -1,7 +1,8 @@
 export const DEFAULT_SETTINGS = { start: "23:00", end: "07:00" };
 export const MAX_NOTE_LENGTH = 500;
-export const QUALITY_LABELS = ["", "gar nicht", "wenig", "mittelmäßig", "ziemlich", "sehr"];
 export const STATS_NIGHT_COUNT = 7;
+
+import { formatDuration, translate } from "./i18n.js";
 
 export function isValidTime(value) {
   return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
@@ -39,15 +40,14 @@ export function getDurationMinutes(startTime, endTime) {
   return duration;
 }
 
-export function formatMinutes(totalMinutes) {
-  if (!Number.isFinite(totalMinutes) || totalMinutes < 0) return "–";
-  const hours = Math.floor(totalMinutes / 60);
-  const remainingMinutes = totalMinutes % 60;
-  return `${hours} h ${String(remainingMinutes).padStart(2, "0")} min`;
+export function formatMinutes(totalMinutes, language = "de") {
+  return formatDuration(totalMinutes, language);
 }
 
-export function getQualityLabel(quality) {
-  return QUALITY_LABELS[quality] || "Bitte auswählen";
+export function getQualityLabel(quality, language = "de") {
+  return quality >= 1 && quality <= 5
+    ? translate(language, `quality.${quality}`)
+    : translate(language, "form.qualityNone");
 }
 
 export function validateEntry(value) {

@@ -27,7 +27,7 @@ function dateDaysAgo(daysAgo) {
 }
 
 test("PDF report is generated as a single-page A4 landscape document with no entries", () => {
-  const report = createSleepReport([], createdAt);
+  const report = createSleepReport([], "de", createdAt);
   const firstPage = report.internal.pages[1].join("\n");
 
   assert.ok(Math.abs(report.internal.pageSize.getWidth() - 297) < 0.1);
@@ -42,7 +42,7 @@ test("a short report includes one complete entry on A4 landscape", () => {
   entry.nap = 15;
   entry.medication = true;
   entry.medicationName = "Beispiel";
-  const report = createSleepReport([entry], createdAt);
+  const report = createSleepReport([entry], "de", createdAt);
   const firstPage = report.internal.pages[1].join("\n");
 
   assert.equal(report.internal.getNumberOfPages(), 1);
@@ -58,7 +58,7 @@ test("a short report includes one complete entry on A4 landscape", () => {
   assert.match(report.lastAutoTable.body[0].cells["8"].text.join(" "), /Medikament: Beispiel/);
   assert.match(report.lastAutoTable.body[0].cells["8"].text.join(" "), /Ruhige Nacht/);
   assert.match(firstPage, /\(450 min\) Tj/);
-  assert.match(firstPage, /\(18\.10\) Tj/);
+  assert.match(firstPage, /\(18\.10\.\) Tj/);
 });
 
 test("PDF chart uses up to the same seven recent nights as the statistics view", () => {
@@ -67,7 +67,7 @@ test("PDF chart uses up to the same seven recent nights as the statistics view",
     entry.effective = 400 + index * 5;
     return entry;
   });
-  const report = createSleepReport(entries, createdAt);
+  const report = createSleepReport(entries, "de", createdAt);
   const firstPage = report.internal.pages[1].join("\n");
 
   assert.match(firstPage, /\(Kennzahlen \\\(letzte 7 Nächte\\\)\) Tj/);
@@ -79,7 +79,7 @@ test("long reports paginate while retaining their repeated table header", () => 
   const entries = Array.from({ length: 24 }, (_, index) =>
     makeEntry(dateDaysAgo(index + 1), `Notiz ${index + 1}: ${"Text ".repeat(100)}`)
   );
-  const report = createSleepReport(entries, createdAt);
+  const report = createSleepReport(entries, "de", createdAt);
 
   assert.ok(report.internal.getNumberOfPages() > 1);
   assert.equal(report.lastAutoTable.pageNumber, report.internal.getNumberOfPages());
@@ -91,5 +91,41 @@ test("long reports paginate while retaining their repeated table header", () => 
     report.setPage(page);
     assert.ok(Math.abs(report.internal.pageSize.getWidth() - 297) < 0.1);
     assert.ok(Math.abs(report.internal.pageSize.getHeight() - 210) < 0.1);
+  }
+});
+
+test("PDF text, dates, statistics and table headers use all supported languages", () => {
+  const entry = makeEntry("2026-10-18");
+  const cases = [
+    ["de", "Schlaftagebuch", "Erfasste Nächte", "Aufstehzeit", "18.10.2026"],
+    ["fr", "journal du sommeil", "Nuits enregistrées", "Lever", "18/10/2026"],
+    ["en", "Sleep Diary", "Recorded nights", "Wake-up", "10/18/2026"],
+  ];
+
+  for (const [language, title, nightsLabel, wakeLabel, dateLabel] of cases) {
+    const report = createSleepReport([entry], language, createdAt);
+    const firstPage = report.internal.pages[1].join("\n");
+
+    assert.equal(report.lastAutoTable.head[0].cells["2"].text.join(" "), wakeLabel);
+    assert.equal(report.lastAutoTable.body[0].cells["0"].text.join(" "), dateLabel);
+    assert.match(firstPage, new RegExp(`\\(${nightsLabel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\) Tj`));
+    assert.match(firstPage, /\(450 min\) Tj/);
+    assert.ok(firstPage.toLowerCase().includes(title.toLowerCase()));
+  }
+});
+
+test("empty PDFs show a localized chart message rather than an empty chart", () => {
+  const cases = [
+    ["de", "Noch keine Schlafdaten für ein Diagramm vorhanden."],
+    ["fr", "Aucune donnée de sommeil pour créer un graphique."],
+    ["en", "No sleep data available to create a chart."],
+  ];
+
+  for (const [language, message] of cases) {
+    const report = createSleepReport([], language, createdAt);
+    const firstPage = report.internal.pages[1].join("\n");
+    assert.equal(report.internal.getNumberOfPages(), 1);
+    assert.ok(firstPage.includes(message));
+    assert.equal(report.lastAutoTable.body.length, 1);
   }
 });

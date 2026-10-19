@@ -1,5 +1,12 @@
 import "./styles.css";
 import {
+  formatDate,
+  formatNumber,
+  LANGUAGE_NAMES,
+  SUPPORTED_LANGUAGES,
+  translate,
+} from "./i18n.js";
+import {
   calculateSleepStatistics,
   DEFAULT_SETTINGS,
   formatMinutes,
@@ -27,34 +34,33 @@ import {
 const ENTRIES_STORAGE_KEY = "schlaftagebuch.entries.v1";
 const SETTINGS_STORAGE_KEY = "schlaftagebuch.settings.v1";
 const WELCOME_DISMISSED_STORAGE_KEY = "schlaftagebuch.welcome.dismissed.v1";
+const LANGUAGE_STORAGE_KEY = "schlaftagebuch.language.v1";
+
+function readLanguage() {
+  try {
+    const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
+    return SUPPORTED_LANGUAGES.includes(storedLanguage) ? storedLanguage : "de";
+  } catch (error) {
+    alert(translate("de", "error.languageRead", { error: error.message }));
+    return "de";
+  }
+}
+
+let language = readLanguage();
+const t = (key, params) => translate(language, key, params);
 
 const SHEEP_COUNT = 10;
 const SHEEP_STEP_MS = 1950;
-const SHEEP_MESSAGES = [
-  "Und, schon müde?",
-  "Jetzt aber ab ins Bettchen!",
-  "Die Schäfchen sind schon müder als du.",
-  "Na los, Augen zu und gute Nacht!",
-  "Noch wach? Das kann doch nicht wahr sein.",
-  "Dein Kopfkissen vermisst dich.",
-  "Schnarch … äh, das warst nicht du, oder?",
-  "Selbst die Schäfchen fallen gleich um.",
-  "Morgen ist auch noch ein Tag. Hoffentlich.",
-  "Gute Nacht! Wir zählen dann mal ohne dich weiter.",
-  "Du hast gewonnen. Die Müdigkeit gibt auf. Gute Nacht!",
-];
-
 function readStoredJSON(key, fallback, validator, description) {
   try {
     const raw = localStorage.getItem(key);
     if (raw == null) return fallback;
     const value = JSON.parse(raw);
-    if (!validator(value)) throw new Error("Ungültiges Datenformat");
+    if (!validator(value)) throw new Error(t("error.invalidStoredData"));
     return value;
   } catch (error) {
     alert(
-      `${description} konnten nicht gelesen werden. Es werden vorläufig Standardwerte verwendet. ` +
-        `Bitte prüfe den lokalen Speicher. (${error.message})`
+      t("error.storageRead", { description: t(description), error: error.message })
     );
     return fallback;
   }
@@ -62,7 +68,7 @@ function readStoredJSON(key, fallback, validator, description) {
 
 // Saved diary entries, newest first. Each entry looks like:
 // { date, windowStart, windowEnd, bed, wake, total, effective, awake, nap, quality, notes, medication, medicationName }
-let entries = readStoredJSON(ENTRIES_STORAGE_KEY, [], validateEntries, "Einträge")
+let entries = readStoredJSON(ENTRIES_STORAGE_KEY, [], validateEntries, "error.entries")
   .map(validateEntry)
   .sort((a, b) => b.date.localeCompare(a.date));
 
@@ -71,7 +77,7 @@ let settings = readStoredJSON(
   SETTINGS_STORAGE_KEY,
   { ...DEFAULT_SETTINGS },
   isValidSettings,
-  "Einstellungen"
+  "error.settings"
 );
 
 // Currently selected star rating (0 = none chosen yet)
@@ -89,29 +95,18 @@ let morningSheepReturnFocus = null;
 let morningSheepKeydownHandler = null;
 
 const MORNING_SHEEP_PHASES = [
-  { state: "sleeping", message: "Nur noch fünf Minuten …", delay: 3000 },
-  { state: "waking", message: "Ich bin noch gar nicht richtig wach.", delay: 3000 },
-  {
-    state: "sitting",
-    message: "Zählt das schon als aufgestanden, wenn ich sitze?",
-    delay: 3400,
-  },
-  {
-    state: "flopping",
-    message: "Können wir den Morgen nicht einfach überspringen?",
-    delay: 3000,
-  },
-  {
-    state: "negotiating",
-    message: "Ich verhandle hiermit eine Verlängerung der Nacht.",
-    delay: 3400,
-  },
-  { state: "standing", message: "Na gut. Aber nur, weil du es bist.", delay: 3300 },
-  { state: "ready", message: "Okay, okay. Wir sind ja schon wach!", delay: 0 },
+  { state: "sleeping", delay: 3000 },
+  { state: "waking", delay: 3000 },
+  { state: "sitting", delay: 3400 },
+  { state: "flopping", delay: 3000 },
+  { state: "negotiating", delay: 3400 },
+  { state: "standing", delay: 3300 },
+  { state: "ready", delay: 0 },
 ];
 const MORNING_SHEEP_REDUCED_MOTION_DELAY_MS = 1800;
 const MORNING_SHEEP_STATES = MORNING_SHEEP_PHASES.map(({ state }) => state);
 let morningSheepPhase = 0;
+let sheepFinaleMessageIndex = 0;
 
 /* --------------------------------------------------------------------------
    DOM helpers
@@ -162,6 +157,7 @@ const dom = {
   // Settings
   defaultStart: byId("defaultStart"),
   defaultEnd: byId("defaultEnd"),
+  languageSelect: byId("language"),
   saveSettingsButton: byId("saveSettings"),
   exportButton: byId("export"),
   exportPdfButton: byId("exportPdf"),
@@ -198,10 +194,38 @@ function getPreviousNightISO() {
   return formatLocalDate(date);
 }
 
+function applyStaticTranslations() {
+  document.documentElement.lang = language;
+  document.querySelectorAll("[data-i18n]").forEach((element) => {
+    element.textContent = t(element.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-content]").forEach((element) => {
+    element.setAttribute("content", t(element.dataset.i18nContent));
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach((element) => {
+    element.setAttribute("placeholder", t(element.dataset.i18nPlaceholder));
+  });
+  document.querySelectorAll("[data-i18n-title]").forEach((element) => {
+    element.setAttribute("title", t(element.dataset.i18nTitle));
+  });
+  document.querySelectorAll("[data-i18n-aria-label]").forEach((element) => {
+    element.setAttribute("aria-label", t(element.dataset.i18nAriaLabel));
+  });
+  document.querySelectorAll("[data-i18n-aria-label-param]").forEach((element) => {
+    element.setAttribute(
+      "aria-label",
+      t(element.dataset.i18nAriaLabelParam, { value: element.dataset.value })
+    );
+  });
+  dom.languageSelect.value = language;
+  document.querySelectorAll("#language option").forEach((option) => {
+    option.textContent = LANGUAGE_NAMES[option.value] ?? LANGUAGE_NAMES.de;
+  });
+}
+
 function renderWindowInfo() {
   byId("windowInfo").textContent =
-    `Dein festgelegtes Schlaffenster: ${settings.start}–${settings.end} Uhr. ` +
-    "Änderungen kannst du unter Einstellungen vornehmen.";
+    t("window.info", { start: settings.start, end: settings.end });
 }
 
 /** Escapes user text before inserting it into HTML. */
@@ -223,11 +247,11 @@ function renderSleepDurationChart(nights) {
   const barsHtml = chronological
     .map((entry) => {
       const heightPx = Math.max(2, (entry.effective / maxMinutes) * MAX_BAR_HEIGHT_PX);
-      return `<div class="bar" style="height:${heightPx}px"><span>${formatMinutes(entry.effective)}</span></div>`;
+      return `<div class="bar" style="height:${heightPx}px"><span>${formatMinutes(entry.effective, language)}</span></div>`;
     })
     .join("");
   const labelsHtml = chronological
-    .map((entry) => `<div>${entry.date.slice(8, 10)}.${entry.date.slice(5, 7)}</div>`)
+    .map((entry) => `<div>${formatDate(new Date(`${entry.date}T12:00:00`), language, { day: "2-digit", month: "2-digit" })}</div>`)
     .join("");
   return `<div class="bar-wrap">${barsHtml}</div><div class="bar-labels">${labelsHtml}</div>`;
 }
@@ -242,7 +266,7 @@ function saveEntries(nextEntries = entries) {
     entries = nextEntries;
     return true;
   } catch (error) {
-    alert(`Einträge konnten nicht gespeichert werden. Bitte prüfe den verfügbaren Speicherplatz. (${error.message})`);
+    alert(t("error.storageSaveEntries", { error: error.message }));
     return false;
   }
 }
@@ -253,7 +277,7 @@ function saveSettings(nextSettings = settings) {
     settings = nextSettings;
     return true;
   } catch (error) {
-    alert(`Einstellungen konnten nicht gespeichert werden. (${error.message})`);
+    alert(t("error.storageSaveSettings", { error: error.message }));
     return false;
   }
 }
@@ -274,13 +298,13 @@ function updateCalculatedDurations() {
     awakeMinutes <= totalMinutes &&
     awakeMinutes % 5 === 0;
 
-  dom.sleepDurationOutput.textContent = formatMinutes(hasValidTotal ? totalMinutes : null);
+  dom.sleepDurationOutput.textContent = formatMinutes(hasValidTotal ? totalMinutes : null, language);
 
   const effectiveMinutes =
     !validAwakeMinutes
       ? null
       : Math.max(0, totalMinutes - awakeMinutes);
-  dom.effectiveDurationOutput.textContent = formatMinutes(effectiveMinutes);
+  dom.effectiveDurationOutput.textContent = formatMinutes(effectiveMinutes, language);
 }
 
 /** Highlights the selected stars and updates the text label below them. */
@@ -292,8 +316,8 @@ function renderStars() {
     starButton.setAttribute("aria-pressed", String(starValue === selectedQuality));
   });
   dom.qualityText.textContent = selectedQuality
-    ? getQualityLabel(selectedQuality)
-    : "Bitte auswählen";
+    ? getQualityLabel(selectedQuality, language)
+    : t("form.qualityNone");
 }
 
 /** Clears the form and pre-fills the date of the previous night. */
@@ -319,7 +343,7 @@ function resetForm(date = getPreviousNightISO()) {
 
   renderStars();
   updateCalculatedDurations();
-  dom.todayTitle.textContent = "Schlaf von letzter Nacht";
+  dom.todayTitle.textContent = t("today.lastNight");
 }
 
 /** Fills the form with an existing entry so it can be edited. */
@@ -344,7 +368,7 @@ function loadEntryIntoForm(entry) {
 
   renderStars();
   updateCalculatedDurations();
-  dom.todayTitle.textContent = "Eintrag bearbeiten";
+  dom.todayTitle.textContent = t("today.edit");
   switchView("today");
 }
 
@@ -388,14 +412,15 @@ function createSheepMarkup() {
 }
 
 function updateSheepCount() {
-  dom.sheepCounter.textContent = `Schafe gezählt: ${sheepCount}`;
+  dom.sheepCounter.textContent = t("sheep.counter", { count: formatNumber(sheepCount, language) });
   dom.sheepFinale.hidden = sheepCount < SHEEP_COUNT;
   if (sheepCount >= SHEEP_COUNT) {
     const messageIndex = Math.min(
       Math.floor(sheepCount / SHEEP_COUNT) - 1,
       SHEEP_MESSAGES.length - 1
     );
-    dom.sheepFinale.textContent = SHEEP_MESSAGES[messageIndex];
+    sheepFinaleMessageIndex = messageIndex;
+    dom.sheepFinale.textContent = t(`sheep.message.${messageIndex}`);
   }
 }
 
@@ -495,7 +520,7 @@ function showMorningSheepPhase(phaseIndex) {
   MORNING_SHEEP_STATES.forEach((state) => {
     dom.morningScene.classList.toggle(`morning-scene--${state}`, state === phase.state);
   });
-  dom.morningMessage.textContent = phase.message;
+  dom.morningMessage.textContent = t(`morning.phase.${phaseIndex}`);
 
   if (phase.state === "ready") {
     dom.morningFinale.hidden = false;
@@ -557,11 +582,11 @@ function handleSaveEntry() {
   const bed = dom.bedTime.value;
   const wake = dom.wakeTime.value;
   if (!isValidDate(date)) {
-    alert("Bitte ein gültiges Datum auswählen.");
+    alert(t("error.invalidDate"));
     return;
   }
   if (!isValidTime(bed) || !isValidTime(wake)) {
-    alert("Bitte gültige Bett- und Aufstehzeiten eingeben.");
+    alert(t("error.invalidTimes"));
     return;
   }
 
@@ -571,7 +596,7 @@ function handleSaveEntry() {
     ? (dom.napMinutes.value === "" ? 0 : Number(dom.napMinutes.value))
     : 0;
   if (totalMinutes <= 0) {
-    alert("Bett- und Aufstehzeit dürfen nicht identisch sein.");
+    alert(t("error.sameTimes"));
     return;
   }
   if (
@@ -580,35 +605,35 @@ function handleSaveEntry() {
     awakeMinutes > totalMinutes ||
     awakeMinutes % 5 !== 0
   ) {
-    alert("Die Wachzeit muss eine Zahl in 5-Minuten-Schritten zwischen 0 und der gesamten Schlafdauer sein.");
+    alert(t("error.awake"));
     return;
   }
   if (!Number.isInteger(napMinutes) || napMinutes < 0 || napMinutes % 5 !== 0) {
-    alert("Der Tagesschlaf muss eine nicht-negative Zahl in 5-Minuten-Schritten sein.");
+    alert(t("error.nap"));
     return;
   }
   if (!Number.isInteger(selectedQuality) || selectedQuality < 1 || selectedQuality > 5) {
-    alert("Bitte eine Schlafqualität zwischen 1 und 5 Sternen auswählen.");
+    alert(t("error.quality"));
     return;
   }
   if (dom.notes.value.length > MAX_NOTE_LENGTH) {
-    alert(`Notizen dürfen höchstens ${MAX_NOTE_LENGTH} Zeichen enthalten.`);
+    alert(t("error.notesLength", { max: MAX_NOTE_LENGTH }));
     return;
   }
   const medication = dom.medicationSelect.value === "1";
   const medicationName = medication ? dom.medicationName.value.trim() : "";
   if (medication && !medicationName) {
-    alert("Bitte das eingenommene Medikament angeben.");
+    alert(t("error.medicationName"));
     return;
   }
   if (medicationName.length > MAX_NOTE_LENGTH) {
-    alert(`Der Medikamentenname darf höchstens ${MAX_NOTE_LENGTH} Zeichen enthalten.`);
+    alert(t("error.medicationLength", { max: MAX_NOTE_LENGTH }));
     return;
   }
 
   const targetEntry = entries.find((entry) => entry.date === date);
   if (targetEntry && date !== editingDate) {
-    alert("Für dieses Datum gibt es bereits einen Eintrag. Bitte wähle ein anderes Datum.");
+    alert(t("error.duplicateDate"));
     return;
   }
   const existingEntry = entries.find((entry) => entry.date === editingDate);
@@ -651,16 +676,19 @@ function handleSaveEntry() {
 
 /** Builds the HTML for a single history entry. */
 function renderHistoryEntry(entry) {
-  const dateLabel = new Date(entry.date + "T12:00").toLocaleDateString("de-CH", {
+  const dateLabel = formatDate(new Date(entry.date + "T12:00"), language, {
     weekday: "short",
     day: "2-digit",
     month: "2-digit",
     year: "numeric",
   });
   const stars = "★".repeat(entry.quality) + "☆".repeat(5 - entry.quality);
-  const notesSuffix = entry.notes ? " · " + escapeHtml(entry.notes) : "";
+  const notesSuffix = entry.notes ? ` · ${escapeHtml(entry.notes)}` : "";
   const medicationSuffix = entry.medication
-    ? ` · Medikamente: ${escapeHtml(entry.medicationName)}`
+    ? ` · ${t("history.medication", { name: escapeHtml(entry.medicationName) })}`
+    : "";
+  const napSuffix = entry.nap
+    ? ` · ${t("history.nap", { minutes: formatNumber(entry.nap, language) })}`
     : "";
 
   // Buttons carry the entry date in data-date; clicks are handled via delegation
@@ -672,27 +700,27 @@ function renderHistoryEntry(entry) {
           <div class="badge">${entry.bed} – ${entry.wake}</div>
         </div>
         <div>
-          <b>${formatMinutes(entry.effective)}</b>
+          <b>${formatMinutes(entry.effective, language)}</b>
           <div class="badge">${stars}</div>
         </div>
       </div>
-      <div class="small">Wach: ${entry.awake} min · Tagesschlaf: ${entry.nap} min${medicationSuffix}${notesSuffix}</div>
+      <div class="small">${t("history.awake", { minutes: formatNumber(entry.awake, language) })}${napSuffix}${medicationSuffix}${notesSuffix}</div>
       <br>
-      <button class="secondary" data-action="edit" data-date="${entry.date}">Bearbeiten</button>
-      <button class="secondary danger" data-action="delete" data-date="${entry.date}">Löschen</button>
+      <button class="secondary" data-action="edit" data-date="${entry.date}">${t("history.edit")}</button>
+      <button class="secondary danger" data-action="delete" data-date="${entry.date}">${t("history.delete")}</button>
     </div>`;
 }
 
 function renderHistory() {
   if (!entries.length) {
-    dom.historyList.innerHTML = '<div class="empty">Noch keine Einträge vorhanden.</div>';
+    dom.historyList.innerHTML = `<div class="empty">${t("history.empty")}</div>`;
     return;
   }
   dom.historyList.innerHTML = entries.map(renderHistoryEntry).join("");
 }
 
 function deleteEntry(date) {
-  if (!confirm("Diesen Eintrag löschen?")) return;
+  if (!confirm(t("confirm.deleteEntry"))) return;
 
   const updatedEntries = entries.filter((entry) => entry.date !== date);
   if (!saveEntries(updatedEntries)) return;
@@ -724,17 +752,17 @@ function renderStats() {
 
   if (!recentNights.length) {
     dom.statCards.innerHTML =
-      '<div class="empty" style="grid-column:1/-1">Noch keine Daten.</div>';
+      `<div class="empty" style="grid-column:1/-1">${t("stats.empty")}</div>`;
     dom.chart.innerHTML = "";
     return;
   }
 
   // Summary tiles
   dom.statCards.innerHTML = `
-    <div class="stat"><span class="small">Ø Effektive Schlafdauer</span><b>${formatMinutes(statistics.averageEffective)}</b></div>
-    <div class="stat"><span class="small">Ø Qualität</span><b>${statistics.averageQuality.toFixed(1)} / 5</b></div>
-    <div class="stat"><span class="small">Ø Wachzeit</span><b>${statistics.averageAwake} min</b></div>
-    <div class="stat"><span class="small">Nächte</span><b>${recentNights.length}</b></div>`;
+    <div class="stat"><span class="small">${t("stats.averageEffective")}</span><b>${formatMinutes(statistics.averageEffective, language)}</b></div>
+    <div class="stat"><span class="small">${t("stats.averageQuality")}</span><b>${formatNumber(statistics.averageQuality, language, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 5</b></div>
+    <div class="stat"><span class="small">${t("stats.averageAwake")}</span><b>${formatNumber(statistics.averageAwake, language)} ${t("time.minutes")}</b></div>
+    <div class="stat"><span class="small">${t("stats.nights")}</span><b>${formatNumber(recentNights.length, language)}</b></div>`;
 
   dom.chart.innerHTML = renderSleepDurationChart(recentNights);
 }
@@ -746,9 +774,9 @@ function renderStats() {
 async function handleExportPdf() {
   try {
     const { createSleepReport } = await import("./pdf-report.js");
-    createSleepReport(entries).save("schlaftagebuch.pdf");
+    createSleepReport(entries, language).save("schlaftagebuch.pdf");
   } catch (error) {
-    alert(`Der PDF-Bericht konnte nicht erstellt werden. (${error.message})`);
+    alert(t("error.pdf", { error: error.message }));
   }
 }
 
@@ -758,12 +786,12 @@ function handleSaveSettings() {
     end: dom.defaultEnd.value,
   };
   if (!isValidSettings(nextSettings)) {
-    alert("Bitte gültige, unterschiedliche Start- und Endzeiten für das Schlaffenster eingeben.");
+    alert(t("error.windowSettings"));
     return;
   }
   if (!saveSettings(nextSettings)) return;
   renderWindowInfo();
-  alert("Einstellungen gespeichert.");
+  alert(t("notice.settingsSaved"));
   resetForm();
 }
 
@@ -789,20 +817,20 @@ function parseImportData(rawData) {
     ? { entries: parsed, settings }
     : parsed;
   if (!payload || typeof payload !== "object" || !Array.isArray(payload.entries)) {
-    throw new Error("Erwartet wird ein Export mit einer Eintragsliste oder eine reine Eintragsliste.");
+    throw new Error(t("error.importShape"));
   }
 
   const importedEntries = payload.entries.map(validateEntry);
   if (importedEntries.some((entry) => entry === null)) {
-    throw new Error("Mindestens ein Eintrag enthält ungültige oder unvollständige Daten.");
+    throw new Error(t("error.importEntry"));
   }
   if (new Set(importedEntries.map((entry) => entry.date)).size !== importedEntries.length) {
-    throw new Error("Die Sicherung enthält mehrere Einträge mit demselben Datum.");
+    throw new Error(t("error.importDuplicate"));
   }
 
   const importedSettings = payload.settings == null ? settings : payload.settings;
   if (!isValidSettings(importedSettings)) {
-    throw new Error("Die Einstellungen in der Sicherung sind ungültig.");
+    throw new Error(t("error.importSettings"));
   }
   importedEntries.sort((a, b) => b.date.localeCompare(a.date));
   return { entries: importedEntries, settings: { ...importedSettings } };
@@ -810,7 +838,7 @@ function parseImportData(rawData) {
 
 function replaceWithImportedData(importedData) {
   if (entries.length || settings.start !== DEFAULT_SETTINGS.start || settings.end !== DEFAULT_SETTINGS.end) {
-    if (!confirm("Der Import ersetzt alle aktuell gespeicherten Einträge und Einstellungen. Fortfahren?")) {
+    if (!confirm(t("confirm.importReplace"))) {
       return;
     }
   }
@@ -821,7 +849,7 @@ function replaceWithImportedData(importedData) {
     previousSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
     previousEntries = localStorage.getItem(ENTRIES_STORAGE_KEY);
   } catch (error) {
-    alert(`Der lokale Speicher konnte nicht gelesen werden. Import abgebrochen. (${error.message})`);
+    alert(t("error.importReadStorage", { error: error.message }));
     return;
   }
 
@@ -843,10 +871,10 @@ function replaceWithImportedData(importedData) {
         else localStorage.setItem(ENTRIES_STORAGE_KEY, previousEntries);
       }
     } catch (rollbackError) {
-      alert(`Import fehlgeschlagen und die vorherigen Daten konnten nicht vollständig wiederhergestellt werden. (${error.message}; ${rollbackError.message})`);
+      alert(t("error.importRollback", { error: error.message, rollbackError: rollbackError.message }));
       return;
     }
-    alert(`Import fehlgeschlagen. Die bisherigen Daten wurden beibehalten. (${error.message})`);
+    alert(t("error.importPreserved", { error: error.message }));
     return;
   }
 
@@ -860,45 +888,45 @@ function replaceWithImportedData(importedData) {
   dom.importDialog.close();
   dom.importRawData.value = "";
   dom.importFile.value = "";
-  alert("Daten wurden erfolgreich wiederhergestellt.");
+  alert(t("notice.importSuccess"));
 }
 
 function handleImportText(rawData) {
   try {
     replaceWithImportedData(parseImportData(rawData));
   } catch (error) {
-    alert(`Import nicht möglich: ${error.message}`);
+    alert(t("error.importInvalid", { error: error.message }));
   }
 }
 
 async function handleImportFile() {
   const file = dom.importFile.files && dom.importFile.files[0];
   if (!file) {
-    alert("Bitte zuerst eine JSON-Datei auswählen.");
+    alert(t("error.importFileRequired"));
     return;
   }
   try {
     handleImportText(await file.text());
   } catch (error) {
-    alert(`Die JSON-Datei konnte nicht gelesen werden. (${error.message})`);
+    alert(t("error.importFileRead", { error: error.message }));
   }
 }
 
 function handleRestoreRawData() {
   if (!dom.importRawData.value.trim()) {
-    alert("Bitte zuerst Rohdaten einfügen.");
+    alert(t("error.importRawRequired"));
     return;
   }
   handleImportText(dom.importRawData.value);
 }
 
 function handleClearAllData() {
-  if (!confirm("Wirklich alle gespeicherten Schlafeinträge löschen? Deine Einstellungen bleiben erhalten.")) return;
+  if (!confirm(t("confirm.clear"))) return;
 
   try {
     localStorage.removeItem(ENTRIES_STORAGE_KEY);
   } catch (error) {
-    alert(`Einträge konnten nicht gelöscht werden. (${error.message})`);
+    alert(t("error.clear", { error: error.message }));
     return;
   }
   entries = [];
@@ -911,7 +939,7 @@ function openWelcomeIfNeeded() {
   try {
     if (localStorage.getItem(WELCOME_DISMISSED_STORAGE_KEY) === "true") return;
   } catch (error) {
-    alert(`Die Anzeigeeinstellung für die Einführung konnte nicht gelesen werden. (${error.message})`);
+    alert(t("error.introRead", { error: error.message }));
   }
 
   dom.welcomeDialog.showModal();
@@ -923,7 +951,36 @@ function handleWelcomeClosed() {
   try {
     localStorage.setItem(WELCOME_DISMISSED_STORAGE_KEY, "true");
   } catch (error) {
-    alert(`Die Einführungseinstellung konnte nicht gespeichert werden. (${error.message})`);
+    alert(t("error.introSave", { error: error.message }));
+  }
+}
+
+function changeLanguage(nextLanguage) {
+  if (!SUPPORTED_LANGUAGES.includes(nextLanguage) || nextLanguage === language) return;
+  try {
+    localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLanguage);
+  } catch (error) {
+    alert(t("error.languageSave", { error: error.message }));
+    dom.languageSelect.value = language;
+    return;
+  }
+
+  language = nextLanguage;
+  applyStaticTranslations();
+  renderWindowInfo();
+  renderStars();
+  updateCalculatedDurations();
+  if (editingDate) dom.todayTitle.textContent = t("today.edit");
+  renderHistory();
+  renderStats();
+  if (dom.sheepDialog.open) {
+    updateSheepCount();
+    if (sheepCount >= SHEEP_COUNT) {
+      dom.sheepFinale.textContent = t(`sheep.message.${sheepFinaleMessageIndex}`);
+    }
+  }
+  if (dom.morningSheepDialog.open) {
+    dom.morningMessage.textContent = t(`morning.phase.${morningSheepPhase}`);
   }
 }
 
@@ -987,6 +1044,7 @@ function bindEvents() {
 
   // Settings & data
   dom.saveSettingsButton.addEventListener("click", handleSaveSettings);
+  dom.languageSelect.addEventListener("change", () => changeLanguage(dom.languageSelect.value));
   dom.exportButton.addEventListener("click", handleExport);
   dom.exportPdfButton.addEventListener("click", handleExportPdf);
   dom.countSheepButton.addEventListener("click", openSheepCounter);
@@ -1025,6 +1083,7 @@ function bindEvents() {
    -------------------------------------------------------------------------- */
 
 function init() {
+  applyStaticTranslations();
   dom.defaultStart.value = settings.start;
   dom.defaultEnd.value = settings.end;
   renderWindowInfo();

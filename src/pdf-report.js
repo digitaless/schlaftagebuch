@@ -1,6 +1,11 @@
 import { jsPDF } from "jspdf";
 import autoTable from "jspdf-autotable";
 import {
+  formatDate,
+  formatNumber,
+  translate,
+} from "./i18n.js";
+import {
   calculateSleepStatistics,
   formatMinutes,
   getQualityLabel,
@@ -12,24 +17,20 @@ const PAGE_MARGIN = 10;
 const PAGE_WIDTH = 297;
 const TABLE_WIDTHS = [23, 18, 22, 31, 19, 31, 20, 31, 82];
 
-function formatReportDate(dateString) {
-  return new Date(`${dateString}T12:00:00`).toLocaleDateString("de-CH", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+function formatReportDate(dateString, language) {
+  return formatDate(new Date(`${dateString}T12:00:00`), language);
 }
 
-function formatDateRange(entries) {
-  if (!entries.length) return "Keine Einträge";
+function formatDateRange(entries, language) {
+  if (!entries.length) return translate(language, "pdf.noEntries");
   const chronological = [...entries].sort((a, b) => a.date.localeCompare(b.date));
-  return `${formatReportDate(chronological[0].date)} – ${formatReportDate(chronological.at(-1).date)}`;
+  return `${formatReportDate(chronological[0].date, language)}${translate(language, "date.rangeSeparator")}${formatReportDate(chronological.at(-1).date, language)}`;
 }
 
-function createReportRows(entries) {
+function createReportRows(entries, language) {
   if (!entries.length) {
     return [[{
-      content: "Noch keine Einträge vorhanden.",
+      content: translate(language, "pdf.empty"),
       colSpan: TABLE_WIDTHS.length,
       styles: { halign: "center", textColor: [100, 116, 139] },
     }]];
@@ -37,40 +38,45 @@ function createReportRows(entries) {
 
   return entries.map((entry) => {
     const details = [
-      entry.medication ? `Medikament: ${entry.medicationName}` : "",
+      entry.medication
+        ? translate(language, "pdf.medication", { name: entry.medicationName })
+        : "",
       entry.notes,
     ].filter(Boolean).join("\n");
     return [
-      formatReportDate(entry.date),
+      formatReportDate(entry.date, language),
       entry.bed,
       entry.wake,
-      formatMinutes(entry.total),
-      `${entry.awake} min`,
-      formatMinutes(entry.effective),
-      `${entry.nap} min`,
-      `${entry.quality}/5 (${getQualityLabel(entry.quality)})`,
+      formatMinutes(entry.total, language),
+      `${formatNumber(entry.awake, language)} ${translate(language, "time.minutes")}`,
+      formatMinutes(entry.effective, language),
+      `${formatNumber(entry.nap, language)} ${translate(language, "time.minutes")}`,
+      `${entry.quality}/5 (${getQualityLabel(entry.quality, language)})`,
       details || "–",
     ];
   });
 }
 
-function drawEffectiveSleepChart(doc, nights) {
+function drawEffectiveSleepChart(doc, nights, language) {
   const headingY = 62;
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
   doc.setTextColor(51, 65, 85);
 
   if (!nights.length) {
-    doc.text("Effektive Schlafdauer", PAGE_MARGIN, headingY);
+    doc.text(translate(language, "pdf.chartTitle"), PAGE_MARGIN, headingY);
     doc.setFont("helvetica", "normal");
     doc.setFontSize(8);
     doc.setTextColor(100, 116, 139);
-    doc.text("Noch keine Schlafdaten für ein Diagramm vorhanden.", PAGE_MARGIN, 74);
+    doc.text(translate(language, "pdf.noChartData"), PAGE_MARGIN, 74);
     return;
   }
 
   doc.text(
-    `Effektive Schlafdauer - letzte ${nights.length} ${nights.length === 1 ? "Nacht" : "Nächte"}`,
+    translate(language, "pdf.chartRecent", {
+      count: formatNumber(nights.length, language),
+      unit: translate(language, nights.length === 1 ? "pdf.night" : "pdf.nightsPlural"),
+    }),
     PAGE_MARGIN,
     headingY
   );
@@ -96,18 +102,18 @@ function drawEffectiveSleepChart(doc, nights) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(6.5);
     doc.setTextColor(51, 65, 85);
-    doc.text(`${entry.effective} min`, xCenter, Math.max(69, barY - 1.5), {
+    doc.text(`${formatNumber(entry.effective, language)} ${translate(language, "time.minutes")}`, xCenter, Math.max(69, barY - 1.5), {
       align: "center",
     });
     doc.setFontSize(7);
     doc.setTextColor(71, 85, 105);
-    doc.text(`${entry.date.slice(8, 10)}.${entry.date.slice(5, 7)}`, xCenter, 96, {
+    doc.text(formatDate(new Date(`${entry.date}T12:00:00`), language, { day: "2-digit", month: "2-digit" }), xCenter, 96, {
       align: "center",
     });
   });
 }
 
-export function createSleepReport(entries, createdAt = new Date()) {
+export function createSleepReport(entries, language = "de", createdAt = new Date()) {
   const reportEntries = [...entries].sort((a, b) => b.date.localeCompare(a.date));
   const recentNights = reportEntries.slice(0, STATS_NIGHT_COUNT);
   const statistics = calculateSleepStatistics(recentNights);
@@ -120,20 +126,29 @@ export function createSleepReport(entries, createdAt = new Date()) {
   });
   const pageHeight = doc.internal.pageSize.getHeight();
 
-  doc.setProperties({ title: "Schlaftagebuch", subject: "Schlaf- und Erholungsübersicht" });
+  doc.setProperties({
+    title: translate(language, "pdf.title"),
+    subject: translate(language, "pdf.subject"),
+  });
   doc.setTextColor(15, 23, 42);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(20);
-  doc.text("Schlaftagebuch", PAGE_MARGIN, 17);
+  doc.text(translate(language, "pdf.title"), PAGE_MARGIN, 17);
   doc.setFont("helvetica", "normal");
   doc.setTextColor(71, 85, 105);
   doc.setFontSize(9);
-  doc.text(`Berichtszeitraum: ${formatDateRange(reportEntries)}`, PAGE_WIDTH - PAGE_MARGIN, 12, {
-    align: "right",
-  });
-  doc.text(`Erstellt am: ${createdAt.toLocaleDateString("de-CH")}`, PAGE_WIDTH - PAGE_MARGIN, 18, {
-    align: "right",
-  });
+  doc.text(
+    translate(language, "pdf.range", { range: formatDateRange(reportEntries, language) }),
+    PAGE_WIDTH - PAGE_MARGIN,
+    12,
+    { align: "right" }
+  );
+  doc.text(
+    translate(language, "pdf.created", { date: formatDate(createdAt, language) }),
+    PAGE_WIDTH - PAGE_MARGIN,
+    18,
+    { align: "right" }
+  );
   doc.setDrawColor(203, 213, 225);
   doc.setLineWidth(0.4);
   doc.line(PAGE_MARGIN, 23, PAGE_WIDTH - PAGE_MARGIN, 23);
@@ -141,14 +156,14 @@ export function createSleepReport(entries, createdAt = new Date()) {
   doc.setTextColor(51, 65, 85);
   doc.setFont("helvetica", "bold");
   doc.setFontSize(10);
-  doc.text("Kennzahlen (letzte 7 Nächte)", PAGE_MARGIN, 31);
+  doc.text(translate(language, "pdf.statistics"), PAGE_MARGIN, 31);
 
   const summary = [
-    ["Erfasste Nächte", String(statistics.nights)],
-    ["Ø Gesamtschlafdauer", statistics.averageTotal == null ? "–" : formatMinutes(statistics.averageTotal)],
-    ["Ø Effektive Schlafdauer", statistics.averageEffective == null ? "–" : formatMinutes(statistics.averageEffective)],
-    ["Ø Wachzeit", statistics.averageAwake == null ? "–" : `${statistics.averageAwake} min`],
-    ["Ø Schlafqualität", statistics.averageQuality == null ? "–" : `${statistics.averageQuality.toFixed(1)} / 5`],
+    [translate(language, "pdf.nights"), formatNumber(statistics.nights, language)],
+    [translate(language, "pdf.averageTotal"), statistics.averageTotal == null ? "–" : formatMinutes(statistics.averageTotal, language)],
+    [translate(language, "pdf.averageEffective"), statistics.averageEffective == null ? "–" : formatMinutes(statistics.averageEffective, language)],
+    [translate(language, "pdf.averageAwake"), statistics.averageAwake == null ? "–" : `${formatNumber(statistics.averageAwake, language)} ${translate(language, "time.minutes")}`],
+    [translate(language, "pdf.averageQuality"), statistics.averageQuality == null ? "–" : `${formatNumber(statistics.averageQuality, language, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 5`],
   ];
   const cardGap = 4;
   const cardWidth = (PAGE_WIDTH - 2 * PAGE_MARGIN - 4 * cardGap) / summary.length;
@@ -160,35 +175,35 @@ export function createSleepReport(entries, createdAt = new Date()) {
     doc.setFont("helvetica", "normal");
     doc.setFontSize(7);
     doc.setTextColor(71, 85, 105);
-    doc.text(label, x + 3, 41);
+    doc.text(label, x + 3, 40, { maxWidth: cardWidth - 6 });
     doc.setFont("helvetica", "bold");
     doc.setFontSize(10);
     doc.setTextColor(15, 23, 42);
-    doc.text(value, x + 3, 49);
+    doc.text(value, x + 3, 50);
   });
 
-  drawEffectiveSleepChart(doc, recentNights);
+  drawEffectiveSleepChart(doc, recentNights, language);
 
   doc.setFont("helvetica", "bold");
   doc.setFontSize(11);
   doc.setTextColor(15, 23, 42);
-  doc.text("Einzelne Nächte im Berichtszeitraum", PAGE_MARGIN, 103);
+  doc.text(translate(language, "pdf.entriesTitle"), PAGE_MARGIN, 103);
 
   autoTable(doc, {
     startY: 107,
     margin: { top: PAGE_MARGIN, right: PAGE_MARGIN, bottom: 15, left: PAGE_MARGIN },
     head: [[
-      "Datum",
-      "Ins Bett",
-      "Aufstehzeit",
-      "Gesamtdauer",
-      "Wachzeit",
-      "Effektive Dauer",
-      "Tagesschlaf",
-      "Qualität",
-      "Medikament / Notizen",
+      translate(language, "pdf.date"),
+      translate(language, "pdf.bed"),
+      translate(language, "pdf.wake"),
+      translate(language, "pdf.total"),
+      translate(language, "pdf.awake"),
+      translate(language, "pdf.effective"),
+      translate(language, "pdf.nap"),
+      translate(language, "pdf.quality"),
+      translate(language, "pdf.details"),
     ]],
-    body: createReportRows(reportEntries),
+    body: createReportRows(reportEntries, language),
     theme: "grid",
     styles: {
       font: "helvetica",
@@ -215,7 +230,7 @@ export function createSleepReport(entries, createdAt = new Date()) {
       doc.setFont("helvetica", "normal");
       doc.setFontSize(8);
       doc.setTextColor(100, 116, 139);
-      doc.text(`Seite ${pageNumber}`, PAGE_WIDTH - PAGE_MARGIN, pageHeight - 5, {
+      doc.text(translate(language, "pdf.page", { page: pageNumber }), PAGE_WIDTH - PAGE_MARGIN, pageHeight - 5, {
         align: "right",
       });
     },

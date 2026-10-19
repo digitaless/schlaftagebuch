@@ -5,12 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f7fa" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
-  <meta name="description" content="Führe dein Schlaftagebuch privat und lokal auf deinem Gerät – ohne Konto, Tracking oder Cloud.">
+  <meta name="description" content="Führe dein Schlaftagebuch privat und lokal auf deinem Gerät – ohne Konto, Tracking oder Cloud." data-i18n-content="meta.description">
   <meta property="og:title" content="Schlaftagebuch.ch">
-  <meta property="og:description" content="Dein privates Schlaftagebuch – lokal auf deinem Gerät und ohne Tracking.">
+  <meta property="og:description" content="Dein privates Schlaftagebuch – lokal auf deinem Gerät und ohne Tracking." data-i18n-content="meta.ogDescription">
   <meta property="og:type" content="website">
   <meta property="og:url" content="https://schlaftagebuch.ch/">
-  <title>Schlaftagebuch.ch</title>
+  <title data-i18n="pdf.title">Schlaftagebuch.ch</title>
 </head>
 <body>
 
@@ -18,38 +18,38 @@
   <header class="no-print">
     <div class="header-inner">
       <div class="title">Schlaftagebuch.ch</div>
-      <div class="subtitle">Kein Konto. Kein Tracking. Keine Cloud. Deine Schlafdaten bleiben auf deinem Gerät.</div>
+      <div class="subtitle" data-i18n="app.subtitle">Kein Konto. Kein Tracking. Keine Cloud. Deine Schlafdaten bleiben auf deinem Gerät.</div>
     </div>
   </header>
 
   <!-- ===== Tab navigation (data-view matches the id of a <section> below) ===== -->
-  <nav class="no-print" aria-label="Hauptnavigation">
-    <button class="tab active" data-view="today">Heute</button>
-    <button class="tab" data-view="history">Verlauf</button>
-    <button class="tab" data-view="stats">Statistik</button>
-    <button class="tab" data-view="settings">Einstellungen</button>
+  <nav class="no-print" aria-label="Hauptnavigation" data-i18n-aria-label="nav.label">
+    <button class="tab active" data-view="today" data-i18n="nav.today">Heute</button>
+    <button class="tab" data-view="history" data-i18n="nav.history">Verlauf</button>
+    <button class="tab" data-view="stats" data-i18n="nav.statistics">Statistik</button>
+    <button class="tab" data-view="settings" data-i18n="nav.settings">Einstellungen</button>
   </nav>
 
   <dialog id="welcomeDialog" class="welcome-dialog" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
     <div class="card welcome-card">
       <div class="welcome-header">
         <div>
-          <h2 id="welcomeTitle">Willkommen beim Schlaftagebuch</h2>
-          <p id="welcomeDescription" class="small">Hier findest du die wichtigsten Bereiche auf einen Blick.</p>
+          <h2 id="welcomeTitle" data-i18n="intro.title">Willkommen beim Schlaftagebuch</h2>
+          <p id="welcomeDescription" class="small" data-i18n="intro.description">Hier findest du die wichtigsten Bereiche auf einen Blick.</p>
         </div>
-        <button type="button" class="welcome-close" id="closeWelcome" aria-label="Einführung schliessen">×</button>
+        <button type="button" class="welcome-close" id="closeWelcome" aria-label="Einführung schliessen" data-i18n-aria-label="intro.close">×</button>
       </div>
       <ul class="welcome-list">
-        <li><strong>Heute</strong><span>Trage Schlafzeiten, Wachphasen, Nickerchen und weitere Angaben zur letzten Nacht ein.</span></li>
-        <li><strong>Verlauf</strong><span>Sieh deine bisherigen Einträge an, bearbeite sie oder vergleiche deine Nächte.</span></li>
-        <li><strong>Statistik</strong><span>Erkenne Muster in Schlafdauer, Wachzeit und Schlafqualität der letzten sieben Nächte.</span></li>
-        <li><strong>Einstellungen</strong><span>Lege dein Standard-Schlaffenster fest und sichere oder importiere deine Daten.</span></li>
+        <li><strong data-i18n="nav.today">Heute</strong><span data-i18n="intro.today">Trage Schlafzeiten, Wachphasen, Nickerchen und weitere Angaben zur letzten Nacht ein.</span></li>
+        <li><strong data-i18n="nav.history">Verlauf</strong><span data-i18n="intro.history">Sieh dir deine bisherigen Einträge an und vergleiche deine Nächte.</span></li>
+        <li><strong data-i18n="nav.statistics">Statistik</strong><span data-i18n="intro.statistics">Erkenne Muster in Schlafdauer, Wachzeit und Schlafqualität.</span></li>
+        <li><strong data-i18n="nav.settings">Einstellungen</strong><span data-i18n="intro.settings">Passe deine Einstellungen an und sichere oder importiere deine Daten.</span></li>
       </ul>
       <label class="welcome-choice" for="welcomeDismissCheckbox">
         <input id="welcomeDismissCheckbox" type="checkbox">
-        <span>Diese Meldung nicht mehr anzeigen</span>
+        <span data-i18n="intro.dismiss">Diese Meldung nicht mehr anzeigen</span>
       </label>
-      <button type="button" class="primary welcome-start" id="welcomeStart">Los geht's</button>
+      <button type="button" class="primary welcome-start" id="welcomeStart" data-i18n="intro.start">Los geht's</button>
     </div>
   </dialog>
 
@@ -57,13 +57,13 @@
 
     <!-- ===== View: Heute (entry form) ===== -->
     <section id="today" class="view active">
-      <div id="savedNotice" class="notice" style="display:none">Eintrag gespeichert.</div>
+      <div id="savedNotice" class="notice" style="display:none" data-i18n="notice.saved">Eintrag gespeichert.</div>
 
       <div class="card">
         <div class="today-heading">
-          <h2 id="todayTitle">Schlaf von letzter Nacht</h2>
+          <h2 id="todayTitle" data-i18n="today.lastNight">Schlaf von letzter Nacht</h2>
           <div class="today-sheep-actions">
-            <button type="button" class="sheep-button" id="countSheep" aria-label="Schäfchen zählen" title="Schäfchen zählen">
+            <button type="button" class="sheep-button" id="countSheep" aria-label="Schäfchen zählen" title="Schäfchen zählen" data-i18n-aria-label="today.countSheep" data-i18n-title="today.countSheep">
               <svg viewBox="0 0 48 36" aria-hidden="true" focusable="false">
                 <ellipse cx="23" cy="21" rx="15" ry="10" fill="currentColor"/>
                 <circle cx="11" cy="17" r="6" fill="currentColor"/>
@@ -75,7 +75,7 @@
                 <path d="M14 27v6m8-4v4m10-6v6" stroke="currentColor" stroke-width="3" stroke-linecap="round"/>
               </svg>
             </button>
-            <button type="button" class="sheep-button" id="wakeSheep" aria-label="Schaf aufwecken" title="Schaf aufwecken">
+            <button type="button" class="sheep-button" id="wakeSheep" aria-label="Schaf aufwecken" title="Schaf aufwecken" data-i18n-aria-label="today.wakeSheep" data-i18n-title="today.wakeSheep">
               <svg viewBox="0 0 48 36" aria-hidden="true" focusable="false">
                 <path d="M7 18a17 17 0 0 1 34 0" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>
                 <path d="M24 1v4M10 6l3 3m22-3-3 3M3 17h5m32 0h5" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>
@@ -93,80 +93,80 @@
 
         <div class="grid">
           <div class="field">
-            <label for="date">Datum</label>
+            <label for="date" data-i18n="form.date">Datum</label>
             <input id="date" type="date" required>
           </div>
 
           <p id="windowInfo" class="small full"></p>
 
           <div class="field">
-            <label for="bed">Wann bist du abends ins Bett gegangen?</label>
+            <label for="bed" data-i18n="form.bed">Wann bist du abends ins Bett gegangen?</label>
             <input id="bed" type="time" required>
           </div>
 
           <div class="field">
-            <label for="wake">Wann bist du morgens aufgestanden?</label>
+            <label for="wake" data-i18n="form.wake">Wann bist du morgens aufgestanden?</label>
             <input id="wake" type="time" required>
           </div>
 
           <div class="field">
-            <label>Gesamte Schlafdauer</label>
+            <label data-i18n="form.total">Gesamte Schlafdauer</label>
             <output class="calc" id="sleepCalc" aria-live="polite">–</output>
           </div>
 
           <div class="field">
-            <label for="awake">Wie lange insgesamt wach im Bett?</label>
-            <input id="awake" type="number" min="0" step="5" placeholder="Minuten">
+            <label for="awake" data-i18n="form.awake">Wie lange insgesamt wach im Bett?</label>
+            <input id="awake" type="number" min="0" step="5" placeholder="Minuten" data-i18n-placeholder="form.minutes">
           </div>
 
           <div class="field">
-            <label>Effektive Schlafdauer</label>
+            <label data-i18n="form.effective">Effektive Schlafdauer</label>
             <output class="calc" id="effectiveCalc" aria-live="polite">–</output>
           </div>
 
           <div class="field">
-            <label for="nap">Tagesschlaf</label>
+            <label for="nap" data-i18n="form.nap">Tagesschlaf</label>
             <div class="row">
               <select id="nap">
-                <option value="0">Nein</option>
-                <option value="1">Ja</option>
+                <option value="0" data-i18n="form.no">Nein</option>
+                <option value="1" data-i18n="form.yes">Ja</option>
               </select>
-              <input id="napMin" type="number" min="0" step="5" value="0" placeholder="Minuten">
+              <input id="napMin" type="number" min="0" step="5" value="0" placeholder="Minuten" data-i18n-placeholder="form.minutes">
             </div>
           </div>
 
           <div class="field quality-field">
-            <label>Wie zufrieden bist du mit deiner Schlafqualität?</label>
-            <div class="stars" id="stars" role="group" aria-label="Schlafqualität">
-              <button type="button" class="star" data-value="1" aria-label="1 von 5 Sternen">★</button>
-              <button type="button" class="star" data-value="2" aria-label="2 von 5 Sternen">★</button>
-              <button type="button" class="star" data-value="3" aria-label="3 von 5 Sternen">★</button>
-              <button type="button" class="star" data-value="4" aria-label="4 von 5 Sternen">★</button>
-              <button type="button" class="star" data-value="5" aria-label="5 von 5 Sternen">★</button>
+            <label data-i18n="form.quality">Wie zufrieden bist du mit deiner Schlafqualität?</label>
+            <div class="stars" id="stars" role="group" aria-label="Schlafqualität" data-i18n-aria-label="form.qualityGroup">
+              <button type="button" class="star" data-value="1" aria-label="1 von 5 Sternen" data-i18n-aria-label-param="form.star">★</button>
+              <button type="button" class="star" data-value="2" aria-label="2 von 5 Sternen" data-i18n-aria-label-param="form.star">★</button>
+              <button type="button" class="star" data-value="3" aria-label="3 von 5 Sternen" data-i18n-aria-label-param="form.star">★</button>
+              <button type="button" class="star" data-value="4" aria-label="4 von 5 Sternen" data-i18n-aria-label-param="form.star">★</button>
+              <button type="button" class="star" data-value="5" aria-label="5 von 5 Sternen" data-i18n-aria-label-param="form.star">★</button>
             </div>
-            <div class="small" id="qualityText" aria-live="polite">Bitte auswählen</div>
+            <div class="small" id="qualityText" aria-live="polite" data-i18n="form.qualityNone">Bitte auswählen</div>
           </div>
 
           <div class="field medication-field">
-            <label for="medication">Medikamente eingenommen?</label>
+            <label for="medication" data-i18n="form.medication">Medikamente eingenommen?</label>
             <select id="medication">
-              <option value="0">Nein</option>
-              <option value="1">Ja</option>
+              <option value="0" data-i18n="form.no">Nein</option>
+              <option value="1" data-i18n="form.yes">Ja</option>
             </select>
           </div>
 
           <div class="field medication-field" id="medicationNameField" hidden>
-            <label for="medicationName">Welches?</label>
-            <input id="medicationName" type="text" maxlength="500" placeholder="Medikament">
+            <label for="medicationName" data-i18n="form.whichMedication">Welches?</label>
+            <input id="medicationName" type="text" maxlength="500" placeholder="Medikament" data-i18n-placeholder="form.medicationPlaceholder">
           </div>
 
           <div class="field full">
-            <label for="notes">Notizen (optional)</label>
-            <input id="notes" type="text" maxlength="500" placeholder="z.B. spät gegessen, Alkohol, Stress ...">
+            <label for="notes" data-i18n="form.notes">Notizen (optional)</label>
+            <input id="notes" type="text" maxlength="500" placeholder="z.B. spät gegessen, Alkohol, Stress ..." data-i18n-placeholder="form.notesPlaceholder">
           </div>
 
           <div class="full">
-            <button class="primary" id="save">Eintrag speichern</button>
+            <button class="primary" id="save" data-i18n="form.save">Eintrag speichern</button>
           </div>
         </div>
       </div>
@@ -175,7 +175,7 @@
     <!-- ===== View: Verlauf (list rendered by app.js) ===== -->
     <section id="history" class="view">
       <div class="card">
-        <h2>Verlauf</h2>
+        <h2 data-i18n="history.title">Verlauf</h2>
         <div id="historyList"></div>
       </div>
     </section>
@@ -183,11 +183,11 @@
     <!-- ===== View: Statistik (tiles + chart rendered by app.js) ===== -->
     <section id="stats" class="view">
       <div class="card">
-        <h2>Letzte 7 Nächte</h2>
+        <h2 data-i18n="stats.title">Letzte 7 Nächte</h2>
         <div class="stats" id="statCards"></div>
       </div>
       <div class="card">
-        <h3>Effektive Schlafdauer</h3>
+        <h3 data-i18n="stats.chart">Effektive Schlafdauer</h3>
         <div id="chart"></div>
       </div>
     </section>
@@ -195,28 +195,36 @@
     <!-- ===== View: Einstellungen ===== -->
     <section id="settings" class="view">
       <div class="card">
-        <h2>Einstellungen</h2>
+        <h2 data-i18n="settings.title">Einstellungen</h2>
+        <div class="field language-field">
+          <label for="language" data-i18n="settings.language">Sprache</label>
+          <select id="language">
+            <option value="de">Deutsch</option>
+            <option value="fr">Français</option>
+            <option value="en">English</option>
+          </select>
+        </div>
         <div class="grid">
           <div class="field">
-            <label for="defaultStart">Standard-Schlaffenster von</label>
+            <label for="defaultStart" data-i18n="settings.windowStart">Standard-Schlaffenster von</label>
             <input id="defaultStart" type="time">
           </div>
           <div class="field">
-            <label for="defaultEnd">bis</label>
+            <label for="defaultEnd" data-i18n="settings.windowEnd">bis</label>
             <input id="defaultEnd" type="time">
           </div>
         </div>
         <br>
-        <button class="primary" id="saveSettings">Einstellungen speichern</button>
+        <button class="primary" id="saveSettings" data-i18n="settings.save">Einstellungen speichern</button>
       </div>
 
       <div class="card">
-        <h3>Daten</h3>
-        <p class="small">Die Einträge werden nur in diesem Browser auf diesem Gerät gespeichert.</p>
-        <button type="button" class="secondary" id="export">Daten als JSON exportieren</button>
-        <button type="button" class="secondary" id="exportPdf">PDF exportieren</button>
-        <button type="button" class="secondary" id="import">Daten importieren / wiederherstellen</button>
-        <button type="button" class="secondary" id="clear">Alle Daten löschen</button>
+        <h3 data-i18n="settings.data">Daten</h3>
+        <p class="small" data-i18n="settings.localStorage">Die Einträge werden nur in diesem Browser auf diesem Gerät gespeichert.</p>
+        <button type="button" class="secondary" id="export" data-i18n="settings.exportJson">Daten als JSON exportieren</button>
+        <button type="button" class="secondary" id="exportPdf" data-i18n="settings.exportPdf">PDF exportieren</button>
+        <button type="button" class="secondary" id="import" data-i18n="settings.import">Daten importieren / wiederherstellen</button>
+        <button type="button" class="secondary" id="clear" data-i18n="settings.clear">Alle Daten löschen</button>
       </div>
     </section>
 
@@ -226,10 +234,10 @@
     <div class="sheep-dialog__content">
       <div class="sheep-dialog__header">
         <div>
-          <h2 id="sheepTitle">Schäfchen zählen</h2>
-          <p id="sheepDescription">Lass die Gedanken zur Ruhe kommen und zähle mit.</p>
+          <h2 id="sheepTitle" data-i18n="sheep.title">Schäfchen zählen</h2>
+          <p id="sheepDescription" data-i18n="sheep.description">Lass die Gedanken zur Ruhe kommen und zähle mit.</p>
         </div>
-        <button type="button" class="sheep-close" id="closeSheep" aria-label="Schäfchenzählen schliessen">×</button>
+        <button type="button" class="sheep-close" id="closeSheep" aria-label="Schäfchenzählen schliessen" data-i18n-aria-label="sheep.close">×</button>
       </div>
 
       <div class="sheep-scene" aria-hidden="true">
@@ -250,8 +258,8 @@
 
       <div class="sheep-dialog__footer">
         <p class="sheep-counter" id="sheepCounter" aria-live="polite">Schafe gezählt: 0</p>
-        <p class="sheep-finale" id="sheepFinale" hidden>Und, schon müde?</p>
-        <button type="button" class="secondary sheep-restart" id="restartSheep">Nochmal zählen</button>
+        <p class="sheep-finale" id="sheepFinale" hidden data-i18n="sheep.message.0">Und, schon müde?</p>
+        <button type="button" class="secondary sheep-restart" id="restartSheep" data-i18n="sheep.restart">Nochmal zählen</button>
       </div>
     </div>
   </dialog>
@@ -260,10 +268,10 @@
     <div class="sheep-dialog__content">
       <div class="sheep-dialog__header">
         <div>
-          <h2 id="morningSheepTitle">Morgenschaf</h2>
-          <p id="morningSheepDescription">Eine kleine Aufsteh-Verhandlung.</p>
+          <h2 id="morningSheepTitle" data-i18n="morning.title">Morgenschaf</h2>
+          <p id="morningSheepDescription" data-i18n="morning.description">Eine kleine Aufsteh-Verhandlung.</p>
         </div>
-        <button type="button" class="sheep-close" id="closeMorningSheep" aria-label="Morgenschaf schliessen">×</button>
+        <button type="button" class="sheep-close" id="closeMorningSheep" aria-label="Morgenschaf schliessen" data-i18n-aria-label="morning.close">×</button>
       </div>
 
       <div class="morning-scene" id="morningScene" aria-hidden="true">
@@ -305,10 +313,10 @@
 
       <div class="morning-footer">
         <p class="morning-message" id="morningMessage" role="status" aria-live="polite" aria-atomic="true"></p>
-        <p class="morning-finale" id="morningFinale" hidden>Aufgestanden. Das reicht für den Anfang.</p>
+        <p class="morning-finale" id="morningFinale" hidden data-i18n="morning.finale">Aufgestanden. Das reicht für den Anfang.</p>
         <div class="morning-actions">
-          <button type="button" class="secondary sheep-restart morning-restart" id="restartMorningSheep" hidden>Nochmal versuchen</button>
-          <button type="button" class="secondary morning-done" id="doneMorningSheep" hidden>Zurück zu Heute</button>
+          <button type="button" class="secondary sheep-restart morning-restart" id="restartMorningSheep" hidden data-i18n="morning.restart">Nochmal versuchen</button>
+          <button type="button" class="secondary morning-done" id="doneMorningSheep" hidden data-i18n="morning.done">Zurück zu Heute</button>
         </div>
       </div>
     </div>
@@ -316,22 +324,22 @@
 
   <dialog id="importDialog" class="no-print" aria-labelledby="importTitle">
     <div class="card">
-      <h2 id="importTitle">Daten importieren / wiederherstellen</h2>
-      <p class="small">Der Import ersetzt die gespeicherten Einträge und Einstellungen. Vorhandene Daten werden erst nach deiner Bestätigung ersetzt.</p>
+      <h2 id="importTitle" data-i18n="import.title">Daten importieren / wiederherstellen</h2>
+      <p class="small" data-i18n="import.warning">Der Import ersetzt die gespeicherten Einträge und Einstellungen. Vorhandene Daten werden erst nach deiner Bestätigung ersetzt.</p>
 
       <div class="field">
-        <label for="importFile">JSON-Datei auswählen</label>
+        <label for="importFile" data-i18n="import.fileLabel">JSON-Datei auswählen</label>
         <input id="importFile" type="file" accept="application/json,.json">
-        <button type="button" class="secondary" id="importJson">JSON-Datei importieren</button>
+        <button type="button" class="secondary" id="importJson" data-i18n="import.fileButton">JSON-Datei importieren</button>
       </div>
 
       <div class="field import-raw">
-        <label for="importRawData">Rohdaten aus einer Sicherung einfügen</label>
-        <textarea id="importRawData" rows="7" placeholder='{"settings":{"start":"23:00","end":"07:00"},"entries":[...]}'></textarea>
-        <button type="button" class="secondary" id="restoreRaw">Rohdaten wiederherstellen</button>
+        <label for="importRawData" data-i18n="import.rawLabel">Rohdaten aus einer Sicherung einfügen</label>
+        <textarea id="importRawData" rows="7" placeholder='{"settings":{"start":"23:00","end":"07:00"},"entries":[...]}' data-i18n-placeholder="import.rawPlaceholder"></textarea>
+        <button type="button" class="secondary" id="restoreRaw" data-i18n="import.restore">Rohdaten wiederherstellen</button>
       </div>
 
-      <button type="button" class="secondary" id="cancelImport">Abbrechen</button>
+      <button type="button" class="secondary" id="cancelImport" data-i18n="import.cancel">Abbrechen</button>
     </div>
   </dialog>
 

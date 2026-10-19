@@ -872,6 +872,7 @@ button.secondary {
    -------------------------------------------------------------------------- */
 .stars {
   display: flex;
+  flex-wrap: wrap;
   gap: 0;
 }
 
