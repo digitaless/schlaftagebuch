@@ -105,6 +105,12 @@ test("translation dictionaries have matching keys and fall back to German", () =
   assert.deepEqual(getTranslationKeys("fr").sort(), germanKeys);
   assert.deepEqual(getTranslationKeys("en").sort(), germanKeys);
   assert.equal(translate("fr", "intro.title"), "Bienvenue dans votre journal du sommeil");
+  assert.equal(
+    translate("de", "intro.settings"),
+    "Passe die Einstellungen an, exportiere oder importiere deine Daten und wähle deine bevorzugte Sprache: Deutsch, Französisch oder Englisch."
+  );
+  assert.match(translate("fr", "intro.settings"), /allemand, français ou anglais/);
+  assert.match(translate("en", "intro.settings"), /German, French or English/);
   assert.equal(translate("fr", "missing.key"), "missing.key");
   assert.equal(
     translate("en", "error.notesLength", { max: 500 }),
