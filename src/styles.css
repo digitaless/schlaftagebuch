@@ -755,7 +755,7 @@ dialog::backdrop {
 
 .count-sheep.is-jumping {
   opacity: 1;
-  animation: sheep-hop 1.95s ease-in-out both;
+  animation: sheep-hop 4s ease-in-out both;
 }
 
 @keyframes sheep-hop {

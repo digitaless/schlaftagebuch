@@ -50,7 +50,8 @@ let language = readLanguage();
 const t = (key, params) => translate(language, key, params);
 
 const SHEEP_COUNT = 10;
-const SHEEP_STEP_MS = 1950;
+const SHEEP_MESSAGE_COUNT = 11;
+const SHEEP_STEP_MS = 4000;
 function readStoredJSON(key, fallback, validator, description) {
   try {
     const raw = localStorage.getItem(key);
@@ -417,7 +418,7 @@ function updateSheepCount() {
   if (sheepCount >= SHEEP_COUNT) {
     const messageIndex = Math.min(
       Math.floor(sheepCount / SHEEP_COUNT) - 1,
-      SHEEP_MESSAGES.length - 1
+      SHEEP_MESSAGE_COUNT - 1
     );
     sheepFinaleMessageIndex = messageIndex;
     dom.sheepFinale.textContent = t(`sheep.message.${messageIndex}`);
