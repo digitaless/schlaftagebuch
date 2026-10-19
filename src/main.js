@@ -5,6 +5,7 @@ import {
   formatMinutes,
   getDurationMinutes,
   getQualityLabel,
+  getSleepDurationChartData,
   isValidDate,
   isValidSettings,
   isValidTime,
@@ -25,6 +26,7 @@ import {
 
 const ENTRIES_STORAGE_KEY = "schlaftagebuch.entries.v1";
 const SETTINGS_STORAGE_KEY = "schlaftagebuch.settings.v1";
+const WELCOME_DISMISSED_STORAGE_KEY = "schlaftagebuch.welcome.dismissed.v1";
 
 const SHEEP_COUNT = 10;
 const SHEEP_STEP_MS = 1950;
@@ -171,6 +173,10 @@ const dom = {
   importRawData: byId("importRawData"),
   restoreRawButton: byId("restoreRaw"),
   cancelImportButton: byId("cancelImport"),
+  welcomeDialog: byId("welcomeDialog"),
+  welcomeDismissCheckbox: byId("welcomeDismissCheckbox"),
+  closeWelcomeButton: byId("closeWelcome"),
+  welcomeStartButton: byId("welcomeStart"),
 };
 
 /* --------------------------------------------------------------------------
@@ -212,8 +218,7 @@ function escapeHtml(text) {
 
 function renderSleepDurationChart(nights) {
   if (!nights.length) return "";
-  const chronological = nights.slice().reverse();
-  const maxMinutes = Math.max(...nights.map((entry) => entry.effective), 480);
+  const { chronological, maxMinutes } = getSleepDurationChartData(nights);
   const MAX_BAR_HEIGHT_PX = 150;
   const barsHtml = chronological
     .map((entry) => {
@@ -902,6 +907,26 @@ function handleClearAllData() {
   renderStats();
 }
 
+function openWelcomeIfNeeded() {
+  try {
+    if (localStorage.getItem(WELCOME_DISMISSED_STORAGE_KEY) === "true") return;
+  } catch (error) {
+    alert(`Die Anzeigeeinstellung für die Einführung konnte nicht gelesen werden. (${error.message})`);
+  }
+
+  dom.welcomeDialog.showModal();
+  dom.welcomeStartButton.focus();
+}
+
+function handleWelcomeClosed() {
+  if (!dom.welcomeDismissCheckbox.checked) return;
+  try {
+    localStorage.setItem(WELCOME_DISMISSED_STORAGE_KEY, "true");
+  } catch (error) {
+    alert(`Die Einführungseinstellung konnte nicht gespeichert werden. (${error.message})`);
+  }
+}
+
 /* --------------------------------------------------------------------------
    Navigation
    -------------------------------------------------------------------------- */
@@ -985,6 +1010,14 @@ function bindEvents() {
   dom.restoreRawButton.addEventListener("click", handleRestoreRawData);
   dom.cancelImportButton.addEventListener("click", () => dom.importDialog.close());
   dom.clearButton.addEventListener("click", handleClearAllData);
+  dom.closeWelcomeButton.addEventListener("click", () => dom.welcomeDialog.close());
+  dom.welcomeStartButton.addEventListener("click", () => dom.welcomeDialog.close());
+  dom.welcomeDialog.addEventListener("close", handleWelcomeClosed);
+  document.addEventListener("keydown", (event) => {
+    if (event.key !== "Escape" || !dom.welcomeDialog.open) return;
+    event.preventDefault();
+    dom.welcomeDialog.close();
+  });
 }
 
 /* --------------------------------------------------------------------------
@@ -1001,6 +1034,7 @@ function init() {
   resetForm();
   renderHistory();
   renderStats();
+  openWelcomeIfNeeded();
 }
 
 init();

@@ -30,6 +30,29 @@
     <button class="tab" data-view="settings">Einstellungen</button>
   </nav>
 
+  <dialog id="welcomeDialog" class="welcome-dialog" aria-labelledby="welcomeTitle" aria-describedby="welcomeDescription">
+    <div class="card welcome-card">
+      <div class="welcome-header">
+        <div>
+          <h2 id="welcomeTitle">Willkommen beim Schlaftagebuch</h2>
+          <p id="welcomeDescription" class="small">Hier findest du die wichtigsten Bereiche auf einen Blick.</p>
+        </div>
+        <button type="button" class="welcome-close" id="closeWelcome" aria-label="Einführung schliessen">×</button>
+      </div>
+      <ul class="welcome-list">
+        <li><strong>Heute</strong><span>Trage Schlafzeiten, Wachphasen, Nickerchen und weitere Angaben zur letzten Nacht ein.</span></li>
+        <li><strong>Verlauf</strong><span>Sieh deine bisherigen Einträge an, bearbeite sie oder vergleiche deine Nächte.</span></li>
+        <li><strong>Statistik</strong><span>Erkenne Muster in Schlafdauer, Wachzeit und Schlafqualität der letzten sieben Nächte.</span></li>
+        <li><strong>Einstellungen</strong><span>Lege dein Standard-Schlaffenster fest und sichere oder importiere deine Daten.</span></li>
+      </ul>
+      <label class="welcome-choice" for="welcomeDismissCheckbox">
+        <input id="welcomeDismissCheckbox" type="checkbox">
+        <span>Diese Meldung nicht mehr anzeigen</span>
+      </label>
+      <button type="button" class="primary welcome-start" id="welcomeStart">Los geht's</button>
+    </div>
+  </dialog>
+
   <main class="no-print">
 
     <!-- ===== View: Heute (entry form) ===== -->

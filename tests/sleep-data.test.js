@@ -4,6 +4,7 @@ import {
   calculateSleepStatistics,
   formatMinutes,
   getDurationMinutes,
+  getSleepDurationChartData,
   isValidDate,
   validateEntries,
   validateEntry,
@@ -85,4 +86,15 @@ test("duration formatting avoids non-finite and negative output", () => {
   assert.equal(formatMinutes(Number.NaN), "–");
   assert.equal(formatMinutes(Number.POSITIVE_INFINITY), "–");
   assert.equal(formatMinutes(-5), "–");
+});
+
+test("chart data is chronological and uses the same minimum scale as the statistics view", () => {
+  const data = getSleepDurationChartData([
+    { date: "2026-10-19", effective: 300 },
+    { date: "2026-10-18", effective: 450 },
+  ]);
+
+  assert.deepEqual(data.chronological.map(({ date }) => date), ["2026-10-18", "2026-10-19"]);
+  assert.equal(data.maxMinutes, 480);
+  assert.equal(getSleepDurationChartData([]).maxMinutes, 480);
 });

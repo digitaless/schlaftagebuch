@@ -511,6 +511,100 @@ dialog::backdrop {
   background: rgba(15, 23, 42, 0.55);
 }
 
+.welcome-dialog {
+  width: min(640px, calc(100% - 24px));
+  border: 1px solid var(--line);
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 24px 80px rgba(2, 6, 23, 0.3);
+}
+
+.welcome-card {
+  margin: 0;
+  border: 0;
+  box-shadow: none;
+}
+
+.welcome-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.welcome-header h2 {
+  margin-bottom: 5px;
+}
+
+.welcome-header p {
+  margin: 0;
+}
+
+.welcome-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-alt);
+  color: var(--text);
+  font: inherit;
+  font-size: 25px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.welcome-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin: 18px 0;
+  padding: 0;
+  list-style: none;
+}
+
+.welcome-list li {
+  display: grid;
+  gap: 4px;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--surface-alt);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.welcome-list strong {
+  color: var(--accent-text);
+  font-size: 14px;
+}
+
+.welcome-list span {
+  color: var(--muted);
+}
+
+.welcome-choice {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin: 0 0 12px;
+  cursor: pointer;
+}
+
+.welcome-choice input {
+  flex: 0 0 20px;
+  width: 20px;
+  height: 20px;
+  margin: 0;
+  accent-color: var(--accent);
+}
+
+.welcome-start {
+  width: 100%;
+}
+
 .sheep-dialog {
   width: min(720px, calc(100% - 24px));
   max-height: calc(100% - 24px);
@@ -945,6 +1039,16 @@ button.secondary {
 
   .sheep-dialog__content {
     padding: 17px;
+  }
+
+  .welcome-card {
+    padding: 17px;
+  }
+
+  .welcome-list {
+    grid-template-columns: 1fr;
+    gap: 7px;
+    margin: 12px 0;
   }
 
   .morning-scene {

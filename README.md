@@ -9,9 +9,11 @@ Lokale Web-App zum Führen eines Schlaftagebuchs, komplett ohne Backend. Die Dat
 - Schlafqualität auf einer Skala von 1–5
 - Verlauf mit Bearbeiten und Löschen
 - Statistik der letzten 7 Nächte
+- Effektive Schlafdauer als Diagramm in der Statistik und im PDF-Bericht
 - Konfigurierbares Standard-Schlaffenster
 - JSON-Export und -Import zur Datensicherung
 - Direkter PDF-Export im A4-Querformat, unabhängig vom mobilen Druckdialog
+- Kurze Einführung beim ersten Besuch mit lokal gespeicherter Anzeigeoption
 
 ## Entwicklung
 

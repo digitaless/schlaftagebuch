@@ -131,3 +131,10 @@ export function calculateSleepStatistics(nights) {
       : null,
   };
 }
+
+export function getSleepDurationChartData(nights) {
+  return {
+    chronological: nights.slice().reverse(),
+    maxMinutes: Math.max(...nights.map((entry) => entry.effective), 480),
+  };
+}
