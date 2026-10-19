@@ -459,6 +459,10 @@ main {
   grid-column: 2;
 }
 
+.quality-field {
+  grid-column: 1;
+}
+
 [hidden] {
   display: none !important;
 }
