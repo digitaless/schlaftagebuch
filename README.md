@@ -10,7 +10,8 @@ Lokale Web-App zum Führen eines Schlaftagebuchs, komplett ohne Backend. Die Dat
 - Verlauf mit Bearbeiten und Löschen
 - Statistik der letzten 7 Nächte
 - Konfigurierbares Standard-Schlaffenster
-- JSON-Export
+- JSON-Export und -Import zur Datensicherung
+- Direkter PDF-Export im A4-Querformat, unabhängig vom mobilen Druckdialog
 
 ## Entwicklung
 
@@ -19,6 +20,7 @@ Voraussetzung: Node.js `^20.19.0` oder `>=22.12.0`.
 ```sh
 npm install
 npm run dev       # Entwicklungsserver
+npm test          # Regressionstests
 npm run build     # Produktions-Build nach dist/
 npm run preview   # Build lokal ansehen
 ```

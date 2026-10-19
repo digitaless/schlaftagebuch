@@ -5,6 +5,11 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#f5f7fa" media="(prefers-color-scheme: light)">
   <meta name="theme-color" content="#0f172a" media="(prefers-color-scheme: dark)">
+  <meta name="description" content="Führe dein Schlaftagebuch privat und lokal auf deinem Gerät – ohne Konto, Tracking oder Cloud.">
+  <meta property="og:title" content="Schlaftagebuch.ch">
+  <meta property="og:description" content="Dein privates Schlaftagebuch – lokal auf deinem Gerät und ohne Tracking.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://schlaftagebuch.ch/">
   <title>Schlaftagebuch.ch</title>
 </head>
 <body>
@@ -18,7 +23,7 @@
   </header>
 
   <!-- ===== Tab navigation (data-view matches the id of a <section> below) ===== -->
-  <nav class="no-print">
+  <nav class="no-print" aria-label="Hauptnavigation">
     <button class="tab active" data-view="today">Heute</button>
     <button class="tab" data-view="history">Verlauf</button>
     <button class="tab" data-view="stats">Statistik</button>
@@ -83,7 +88,7 @@
 
           <div class="field">
             <label>Gesamte Schlafdauer</label>
-            <div class="calc" id="sleepCalc">–</div>
+            <output class="calc" id="sleepCalc" aria-live="polite">–</output>
           </div>
 
           <div class="field">
@@ -93,7 +98,7 @@
 
           <div class="field">
             <label>Effektive Schlafdauer</label>
-            <div class="calc" id="effectiveCalc">–</div>
+            <output class="calc" id="effectiveCalc" aria-live="polite">–</output>
           </div>
 
           <div class="field">
@@ -122,14 +127,14 @@
 
           <div class="field full">
             <label>Wie zufrieden bist du mit deiner Schlafqualität?</label>
-            <div class="stars" id="stars">
-              <button type="button" class="star" data-value="1">★</button>
-              <button type="button" class="star" data-value="2">★</button>
-              <button type="button" class="star" data-value="3">★</button>
-              <button type="button" class="star" data-value="4">★</button>
-              <button type="button" class="star" data-value="5">★</button>
+            <div class="stars" id="stars" role="group" aria-label="Schlafqualität">
+              <button type="button" class="star" data-value="1" aria-label="1 von 5 Sternen">★</button>
+              <button type="button" class="star" data-value="2" aria-label="2 von 5 Sternen">★</button>
+              <button type="button" class="star" data-value="3" aria-label="3 von 5 Sternen">★</button>
+              <button type="button" class="star" data-value="4" aria-label="4 von 5 Sternen">★</button>
+              <button type="button" class="star" data-value="5" aria-label="5 von 5 Sternen">★</button>
             </div>
-            <div class="small" id="qualityText">Bitte auswählen</div>
+            <div class="small" id="qualityText" aria-live="polite">Bitte auswählen</div>
           </div>
 
           <div class="field full">
@@ -186,7 +191,7 @@
         <h3>Daten</h3>
         <p class="small">Die Einträge werden nur in diesem Browser auf diesem Gerät gespeichert.</p>
         <button type="button" class="secondary" id="export">Daten als JSON exportieren</button>
-        <button type="button" class="secondary" id="exportPdf">Ausgeben als PDF</button>
+        <button type="button" class="secondary" id="exportPdf">PDF exportieren</button>
         <button type="button" class="secondary" id="import">Daten importieren / wiederherstellen</button>
         <button type="button" class="secondary" id="clear">Alle Daten löschen</button>
       </div>
@@ -285,8 +290,6 @@
       </div>
     </div>
   </dialog>
-
-  <div id="printReport" class="print-report" aria-live="polite"></div>
 
   <dialog id="importDialog" class="no-print" aria-labelledby="importTitle">
     <div class="card">

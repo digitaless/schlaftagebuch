@@ -1,4 +1,18 @@
 import "./styles.css";
+import {
+  calculateSleepStatistics,
+  DEFAULT_SETTINGS,
+  formatMinutes,
+  getDurationMinutes,
+  getQualityLabel,
+  isValidDate,
+  isValidSettings,
+  isValidTime,
+  MAX_NOTE_LENGTH,
+  STATS_NIGHT_COUNT,
+  validateEntries,
+  validateEntry,
+} from "./sleep-data.js";
 
 /* ==========================================================================
    Schlaftagebuch – Application logic
@@ -12,8 +26,6 @@ import "./styles.css";
 const ENTRIES_STORAGE_KEY = "schlaftagebuch.entries.v1";
 const SETTINGS_STORAGE_KEY = "schlaftagebuch.settings.v1";
 
-const DEFAULT_SETTINGS = { start: "23:00", end: "07:00" };
-const MAX_NOTE_LENGTH = 500;
 const SHEEP_COUNT = 10;
 const SHEEP_STEP_MS = 1950;
 const SHEEP_MESSAGES = [
@@ -29,84 +41,6 @@ const SHEEP_MESSAGES = [
   "Gute Nacht! Wir zählen dann mal ohne dich weiter.",
   "Du hast gewonnen. Die Müdigkeit gibt auf. Gute Nacht!",
 ];
-
-// Labels for the 1–5 star rating (index = number of stars)
-const QUALITY_LABELS = ["", "gar nicht", "wenig", "mittelmäßig", "ziemlich", "sehr"];
-
-// How many nights the statistics view covers
-const STATS_NIGHT_COUNT = 7;
-
-function isValidTime(value) {
-  return typeof value === "string" && /^([01]\d|2[0-3]):[0-5]\d$/.test(value);
-}
-
-function isValidDate(value) {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
-  const date = new Date(`${value}T00:00:00Z`);
-  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
-}
-
-function isValidSettings(value) {
-  return (
-    value &&
-    typeof value === "object" &&
-    isValidTime(value.start) &&
-    isValidTime(value.end) &&
-    value.start !== value.end
-  );
-}
-
-function validateEntry(value) {
-  if (!value || typeof value !== "object" || Array.isArray(value)) return null;
-  if (!isValidDate(value.date) || !isValidTime(value.bed) || !isValidTime(value.wake)) {
-    return null;
-  }
-  if (!Number.isInteger(value.quality) || value.quality < 1 || value.quality > 5) return null;
-  if (value.medication != null && typeof value.medication !== "boolean") return null;
-  if (value.medicationName != null && typeof value.medicationName !== "string") return null;
-
-  const total = getDurationMinutes(value.bed, value.wake);
-  if (total <= 0) return null;
-  const awake = value.awake == null ? 0 : Number(value.awake);
-  const nap = value.nap == null ? 0 : Number(value.nap);
-  if (
-    !Number.isInteger(awake) ||
-    awake < 0 ||
-    awake > total ||
-    awake % 5 !== 0 ||
-    !Number.isInteger(nap) ||
-    nap < 0 ||
-    nap % 5 !== 0
-  ) {
-    return null;
-  }
-
-  const windowStart = value.windowStart == null ? DEFAULT_SETTINGS.start : value.windowStart;
-  const windowEnd = value.windowEnd == null ? DEFAULT_SETTINGS.end : value.windowEnd;
-  if (!isValidTime(windowStart) || !isValidTime(windowEnd)) return null;
-  if (value.notes != null && typeof value.notes !== "string") return null;
-  const notes = value.notes || "";
-  if (notes.length > MAX_NOTE_LENGTH) return null;
-  const medication = value.medication ?? false;
-  const medicationName = medication ? (value.medicationName || "").trim() : "";
-  if (medicationName.length > MAX_NOTE_LENGTH || (medication && !medicationName)) return null;
-
-  return {
-    date: value.date,
-    windowStart,
-    windowEnd,
-    bed: value.bed,
-    wake: value.wake,
-    total,
-    effective: Math.max(0, total - awake),
-    awake,
-    nap,
-    quality: value.quality,
-    notes,
-    medication,
-    medicationName,
-  };
-}
 
 function readStoredJSON(key, fallback, validator, description) {
   try {
@@ -124,17 +58,10 @@ function readStoredJSON(key, fallback, validator, description) {
   }
 }
 
-function validateEntries(value) {
-  return (
-    Array.isArray(value) &&
-    value.every((entry) => validateEntry(entry) !== null) &&
-    new Set(value.map((entry) => entry.date)).size === value.length
-  );
-}
-
 // Saved diary entries, newest first. Each entry looks like:
 // { date, windowStart, windowEnd, bed, wake, total, effective, awake, nap, quality, notes, medication, medicationName }
 let entries = readStoredJSON(ENTRIES_STORAGE_KEY, [], validateEntries, "Einträge")
+  .map(validateEntry)
   .sort((a, b) => b.date.localeCompare(a.date));
 
 // Default sleep window used to pre-fill new entries
@@ -244,7 +171,6 @@ const dom = {
   importRawData: byId("importRawData"),
   restoreRawButton: byId("restoreRaw"),
   cancelImportButton: byId("cancelImport"),
-  printReport: byId("printReport"),
 };
 
 /* --------------------------------------------------------------------------
@@ -272,41 +198,6 @@ function renderWindowInfo() {
     "Änderungen kannst du unter Einstellungen vornehmen.";
 }
 
-/** Converts "HH:MM" to minutes since midnight. Returns null for empty input. */
-function timeToMinutes(timeString) {
-  if (!timeString) return null;
-  const [hours, minutes] = timeString.split(":").map(Number);
-  return hours * 60 + minutes;
-}
-
-/**
- * Minutes between two "HH:MM" times. If the end is earlier than the start
- * the span crosses midnight (e.g. 23:00 → 07:00 = 480 min).
- * Returns null if either time is missing.
- */
-function getDurationMinutes(startTime, endTime) {
-  const startMinutes = timeToMinutes(startTime);
-  const endMinutes = timeToMinutes(endTime);
-  if (startMinutes == null || endMinutes == null) return null;
-
-  let duration = endMinutes - startMinutes;
-  if (duration < 0) duration += 24 * 60;
-  return duration;
-}
-
-/** Formats minutes as "7 h 05 min". Shows "–" for missing values. */
-function formatMinutes(totalMinutes) {
-  if (totalMinutes == null || isNaN(totalMinutes)) return "–";
-  const hours = Math.floor(totalMinutes / 60);
-  const remainingMinutes = totalMinutes % 60;
-  return `${hours} h ${String(remainingMinutes).padStart(2, "0")} min`;
-}
-
-/** Text label for a star rating, or the placeholder if none is selected. */
-function getQualityLabel(quality) {
-  return QUALITY_LABELS[quality] || "Bitte auswählen";
-}
-
 /** Escapes user text before inserting it into HTML. */
 function escapeHtml(text) {
   const replacements = {
@@ -317,27 +208,6 @@ function escapeHtml(text) {
     "'": "&#039;",
   };
   return text.replace(/[&<>"']/g, (char) => replacements[char]);
-}
-
-/** Average of a numeric property across a list of entries. */
-function averageOf(list, property) {
-  const sum = list.reduce((total, entry) => total + (Number(entry[property]) || 0), 0);
-  return sum / list.length;
-}
-
-function calculateSleepStatistics(nights) {
-  const qualityValues = nights
-    .map((entry) => Number(entry.quality))
-    .filter((quality) => Number.isFinite(quality) && quality >= 1 && quality <= 5);
-  return {
-    nights: nights.length,
-    averageTotal: nights.length ? Math.round(averageOf(nights, "total")) : null,
-    averageEffective: nights.length ? Math.round(averageOf(nights, "effective")) : null,
-    averageAwake: nights.length ? Math.round(averageOf(nights, "awake")) : null,
-    averageQuality: qualityValues.length
-      ? qualityValues.reduce((sum, quality) => sum + quality, 0) / qualityValues.length
-      : null,
-  };
 }
 
 function renderSleepDurationChart(nights) {
@@ -391,11 +261,20 @@ function saveSettings(nextSettings = settings) {
 function updateCalculatedDurations() {
   const totalMinutes = getDurationMinutes(dom.bedTime.value, dom.wakeTime.value);
   const awakeMinutes = Number(dom.awakeMinutes.value || 0);
+  const hasValidTotal = totalMinutes != null && totalMinutes > 0;
+  const validAwakeMinutes =
+    hasValidTotal &&
+    Number.isInteger(awakeMinutes) &&
+    awakeMinutes >= 0 &&
+    awakeMinutes <= totalMinutes &&
+    awakeMinutes % 5 === 0;
 
-  dom.sleepDurationOutput.textContent = formatMinutes(totalMinutes);
+  dom.sleepDurationOutput.textContent = formatMinutes(hasValidTotal ? totalMinutes : null);
 
   const effectiveMinutes =
-    totalMinutes == null ? null : Math.max(0, totalMinutes - awakeMinutes);
+    !validAwakeMinutes
+      ? null
+      : Math.max(0, totalMinutes - awakeMinutes);
   dom.effectiveDurationOutput.textContent = formatMinutes(effectiveMinutes);
 }
 
@@ -403,7 +282,9 @@ function updateCalculatedDurations() {
 function renderStars() {
   document.querySelectorAll(".star").forEach((starButton) => {
     const starValue = Number(starButton.dataset.value);
-    starButton.classList.toggle("on", starValue <= selectedQuality);
+    const isSelected = starValue <= selectedQuality;
+    starButton.classList.toggle("on", isSelected);
+    starButton.setAttribute("aria-pressed", String(starValue === selectedQuality));
   });
   dom.qualityText.textContent = selectedQuality
     ? getQualityLabel(selectedQuality)
@@ -857,147 +738,12 @@ function renderStats() {
    Settings (view: "Einstellungen")
    -------------------------------------------------------------------------- */
 
-function formatReportDate(dateString) {
-  if (!dateString || !isValidDate(dateString)) return "–";
-  return new Date(`${dateString}T12:00:00`).toLocaleDateString("de-CH", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-}
-
-function formatReportDateRange(entryList) {
-  if (!entryList.length) return "Keine Einträge";
-  const sorted = [...entryList].sort((a, b) => a.date.localeCompare(b.date));
-  return `${formatReportDate(sorted[0].date)} – ${formatReportDate(sorted[sorted.length - 1].date)}`;
-}
-
-function renderPrintReport() {
-  const reportEntries = [...entries].sort((a, b) => a.date.localeCompare(b.date));
-  const recentNights = entries.slice(0, STATS_NIGHT_COUNT);
-  const statistics = calculateSleepStatistics(reportEntries);
-  const chartHtml = renderSleepDurationChart(recentNights);
-  const avgTotalSleep = statistics.averageTotal == null
-    ? "–"
-    : formatMinutes(statistics.averageTotal);
-  const avgEffectiveSleep = statistics.averageEffective == null
-    ? "–"
-    : formatMinutes(statistics.averageEffective);
-  const avgAwake = statistics.averageAwake == null ? "–" : `${statistics.averageAwake} min`;
-  const avgQuality = statistics.averageQuality == null
-    ? "–"
-    : `${statistics.averageQuality.toFixed(1)} / 5`;
-  const exportDate = new Date().toLocaleDateString("de-CH", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
-
-  const rowsHtml = reportEntries.length
-    ? reportEntries
-        .map((entry) => {
-          const qualityText = `${"★".repeat(entry.quality)}${"☆".repeat(5 - entry.quality)} · ${getQualityLabel(entry.quality)}`;
-          const medicationText = entry.medication
-            ? `Medikamente: ${escapeHtml(entry.medicationName)}`
-            : "";
-          const noteText = [medicationText, entry.notes ? escapeHtml(entry.notes) : ""]
-            .filter(Boolean)
-            .join("<br>") || "—";
-          return `
-            <tr>
-              <td>${formatReportDate(entry.date)}</td>
-              <td>${entry.bed}</td>
-              <td>${entry.wake}</td>
-              <td>${formatMinutes(entry.total)}</td>
-              <td>${entry.awake} min</td>
-              <td>${formatMinutes(entry.effective)}</td>
-              <td>
-                <div class="report-quality">${qualityText}</div>
-                <div class="report-notes">${noteText}</div>
-              </td>
-            </tr>`;
-        })
-        .join("")
-    : `<tr><td colspan="7" class="empty-report">Noch keine Einträge vorhanden.</td></tr>`;
-  const chartSectionHtml = chartHtml
-    ? `
-      <section class="print-report__chart">
-        <h2>Effektive Schlafdauer – letzte ${recentNights.length} Nächte</h2>
-        ${chartHtml}
-      </section>`
-    : "";
-
-  dom.printReport.innerHTML = `
-    <div class="print-report__document">
-      <header class="print-report__header">
-        <div>
-          <div class="print-report__eyebrow">Schlaf- und Erholungsübersicht</div>
-          <h1>Schlaftagebuch</h1>
-        </div>
-        <div class="print-report__meta">
-          <div><strong>Zeitraum:</strong> ${formatReportDateRange(reportEntries)}</div>
-          <div><strong>Erstellt am:</strong> ${exportDate}</div>
-        </div>
-      </header>
-
-      <section class="print-report__summary">
-        <div class="report-card">
-          <span>Ø Gesamte Schlafdauer</span>
-          <strong>${avgTotalSleep}</strong>
-        </div>
-        <div class="report-card">
-          <span>Ø Effektive Schlafdauer</span>
-          <strong>${avgEffectiveSleep}</strong>
-        </div>
-        <div class="report-card">
-          <span>Ø Wachzeit</span>
-          <strong>${avgAwake}</strong>
-        </div>
-        <div class="report-card">
-          <span>Ø Qualität</span>
-          <strong>${avgQuality}</strong>
-        </div>
-        <div class="report-card">
-          <span>Erfasste Nächte</span>
-          <strong>${statistics.nights}</strong>
-        </div>
-      </section>
-
-      ${chartSectionHtml}
-
-      <section class="print-report__section">
-        <h2>Einzelne Nächte im Berichtszeitraum</h2>
-        <table class="report-table">
-          <colgroup>
-            <col style="width: 13%">
-            <col style="width: 15%">
-            <col style="width: 12%">
-            <col style="width: 15%">
-            <col style="width: 10%">
-            <col style="width: 15%">
-            <col style="width: 20%">
-          </colgroup>
-          <thead>
-            <tr>
-              <th>Datum / Nacht</th>
-              <th>Ins Bett gegangen</th>
-              <th>Aufgestanden</th>
-              <th>Gesamte Schlafdauer</th>
-              <th>Wachzeit</th>
-              <th>Effektive Schlafdauer</th>
-              <th>Schlafqualität / Befinden &amp; Notizen</th>
-            </tr>
-          </thead>
-          <tbody>${rowsHtml}</tbody>
-        </table>
-      </section>
-    </div>`;
-}
-
-function handleExportPdf() {
-  renderPrintReport();
-  if (window && typeof window.print === "function") {
-    window.print();
+async function handleExportPdf() {
+  try {
+    const { createSleepReport } = await import("./pdf-report.js");
+    createSleepReport(entries).save("schlaftagebuch.pdf");
+  } catch (error) {
+    alert(`Der PDF-Bericht konnte nicht erstellt werden. (${error.message})`);
   }
 }
 
@@ -1166,7 +912,10 @@ function switchView(viewName) {
     view.classList.toggle("active", view.id === viewName);
   });
   document.querySelectorAll(".tab").forEach((tab) => {
-    tab.classList.toggle("active", tab.dataset.view === viewName);
+    const isActive = tab.dataset.view === viewName;
+    tab.classList.toggle("active", isActive);
+    if (isActive) tab.setAttribute("aria-current", "page");
+    else tab.removeAttribute("aria-current");
   });
 
   if (viewName === "history") renderHistory();
