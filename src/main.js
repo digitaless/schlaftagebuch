@@ -154,6 +154,7 @@ const dom = {
   historyList: byId("historyList"),
   statCards: byId("statCards"),
   chart: byId("chart"),
+  statsExportPdfButton: byId("statsExportPdf"),
 
   // Settings
   defaultStart: byId("defaultStart"),
@@ -1059,6 +1060,7 @@ function bindEvents() {
   dom.languageSelect.addEventListener("change", () => changeLanguage(dom.languageSelect.value));
   dom.exportButton.addEventListener("click", handleExport);
   dom.exportPdfButton.addEventListener("click", handleExportPdf);
+  dom.statsExportPdfButton.addEventListener("click", handleExportPdf);
   dom.countSheepButton.addEventListener("click", openSheepCounter);
   dom.wakeSheepButton.addEventListener("click", openMorningSheep);
   dom.closeSheepButton.addEventListener("click", () => dom.sheepDialog.close());

@@ -183,7 +183,10 @@
     <!-- ===== View: Statistik (tiles + chart rendered by app.js) ===== -->
     <section id="stats" class="view">
       <div class="card">
-        <h2 data-i18n="stats.title">Letzte 14 Tage</h2>
+        <div class="stats-card-header">
+          <h2 data-i18n="stats.title">Letzte 14 Tage</h2>
+          <button type="button" class="secondary" id="statsExportPdf" data-i18n="stats.exportPdf">Als PDF ausgeben</button>
+        </div>
         <p id="statsPeriod" class="small"></p>
         <div class="stats" id="statCards"></div>
       </div>

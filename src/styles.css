@@ -924,6 +924,19 @@ button.secondary {
   margin: 0;
 }
 
+.stats-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-bottom: 15px;
+}
+
+.stats-card-header h2 {
+  margin: 0;
+}
+
 .stat-chart h3 {
   min-height: 2.6em;
 }
