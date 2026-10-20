@@ -1,6 +1,6 @@
 export const DEFAULT_SETTINGS = { start: "23:00", end: "07:00" };
 export const MAX_NOTE_LENGTH = 500;
-export const STATS_NIGHT_COUNT = 7;
+export const STATS_DAY_COUNT = 14;
 
 import { formatDuration, translate } from "./i18n.js";
 
@@ -47,7 +47,7 @@ export function formatMinutes(totalMinutes, language = "de") {
 export function getQualityLabel(quality, language = "de") {
   return quality >= 1 && quality <= 5
     ? translate(language, `quality.${quality}`)
-    : translate(language, "form.qualityNone");
+    : translate(language, "history.qualityMissing");
 }
 
 export function validateEntry(value) {
@@ -55,7 +55,12 @@ export function validateEntry(value) {
   if (!isValidDate(value.date) || !isValidTime(value.bed) || !isValidTime(value.wake)) {
     return null;
   }
-  if (!Number.isInteger(value.quality) || value.quality < 1 || value.quality > 5) return null;
+  if (
+    value.quality != null &&
+    (!Number.isInteger(value.quality) || value.quality < 1 || value.quality > 5)
+  ) {
+    return null;
+  }
   if (value.medication != null && typeof value.medication !== "boolean") return null;
   if (value.medicationName != null && typeof value.medicationName !== "string") return null;
 
@@ -95,7 +100,7 @@ export function validateEntry(value) {
     effective: Math.max(0, total - awake),
     awake,
     nap,
-    quality: value.quality,
+    quality: value.quality ?? null,
     notes,
     medication,
     medicationName,
@@ -126,15 +131,64 @@ export function calculateSleepStatistics(nights) {
     averageTotal: averageOf(nights, "total"),
     averageEffective: averageOf(nights, "effective"),
     averageAwake: averageOf(nights, "awake"),
+    averageNap: averageOf(nights, "nap"),
     averageQuality: qualityValues.length
       ? qualityValues.reduce((sum, quality) => sum + quality, 0) / qualityValues.length
       : null,
   };
 }
 
-export function getSleepDurationChartData(nights) {
+export function toLocalDateISO(date = new Date()) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+export function getRollingSleepPeriod(entries, endDate = toLocalDateISO(), dayCount = STATS_DAY_COUNT) {
+  if (!isValidDate(endDate) || !Number.isInteger(dayCount) || dayCount < 1) {
+    throw new RangeError("A valid end date and positive integer day count are required.");
+  }
+
+  const end = new Date(`${endDate}T00:00:00Z`);
+  const start = new Date(end);
+  start.setUTCDate(start.getUTCDate() - dayCount + 1);
+  const startDate = start.toISOString().slice(0, 10);
+  const entriesByDate = new Map(
+    entries
+      .filter((entry) => entry.date >= startDate && entry.date <= endDate)
+      .map((entry) => [entry.date, entry])
+  );
+  const days = Array.from({ length: dayCount }, (_, index) => {
+    const date = new Date(start);
+    date.setUTCDate(date.getUTCDate() + index);
+    const dateString = date.toISOString().slice(0, 10);
+    const entry = entriesByDate.get(dateString) ?? null;
+    return {
+      date: dateString,
+      entry,
+      effective: entry?.effective ?? null,
+      awake: entry?.awake ?? null,
+      nap: entry?.nap ?? null,
+      quality: entry?.quality ?? null,
+    };
+  });
+  const nights = days.flatMap(({ entry }) => entry ? [entry] : []);
+
   return {
-    chronological: nights.slice().reverse(),
-    maxMinutes: Math.max(...nights.map((entry) => entry.effective), 480),
+    startDate,
+    endDate,
+    days,
+    nights,
+    statistics: calculateSleepStatistics(nights),
+  };
+}
+
+export function getSleepChartData(days, property) {
+  const values = days.map((day) => day[property]).filter(Number.isFinite);
+  const minimumScale = property === "effective" ? 480 : property === "quality" ? 5 : 60;
+  return {
+    chronological: days.map(({ date, [property]: value }) => ({ date, value })),
+    maxValue: Math.max(...values, minimumScale),
   };
 }

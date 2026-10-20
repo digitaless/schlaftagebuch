@@ -183,12 +183,27 @@
     <!-- ===== View: Statistik (tiles + chart rendered by app.js) ===== -->
     <section id="stats" class="view">
       <div class="card">
-        <h2 data-i18n="stats.title">Letzte 7 Nächte</h2>
+        <h2 data-i18n="stats.title">Letzte 14 Tage</h2>
+        <p id="statsPeriod" class="small"></p>
         <div class="stats" id="statCards"></div>
       </div>
-      <div class="card">
-        <h3 data-i18n="stats.chart">Effektive Schlafdauer</h3>
-        <div id="chart"></div>
+      <div class="stats-charts">
+        <div class="card stat-chart">
+          <h3 data-i18n="stats.chart">Effektive Schlafdauer</h3>
+          <div id="chart"></div>
+        </div>
+        <div class="card stat-chart">
+          <h3 data-i18n="stats.awakeChart">Wachzeit im Bett</h3>
+          <div id="chartAwake"></div>
+        </div>
+        <div class="card stat-chart">
+          <h3 data-i18n="stats.napChart">Tagesschlaf</h3>
+          <div id="chartNap"></div>
+        </div>
+        <div class="card stat-chart">
+          <h3 data-i18n="stats.qualityChart">Schlafqualität (1–5 Sterne)</h3>
+          <div id="chartQuality"></div>
+        </div>
       </div>
     </section>
 

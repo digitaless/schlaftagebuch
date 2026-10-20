@@ -8,7 +8,7 @@ Lokale Web-App zum Führen eines Schlaftagebuchs, komplett ohne Backend. Die Dat
 - Automatische Berechnung von Schlafdauer und effektiver Schlafdauer
 - Schlafqualität auf einer Skala von 1–5
 - Verlauf mit Bearbeiten und Löschen
-- Statistik der letzten 7 Nächte
+- Statistik der letzten 14 Kalendertage
 - Effektive Schlafdauer als Diagramm in der Statistik und im PDF-Bericht
 - Konfigurierbares Standard-Schlaffenster
 - JSON-Export und -Import zur Datensicherung

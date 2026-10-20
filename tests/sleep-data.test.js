@@ -4,7 +4,8 @@ import {
   calculateSleepStatistics,
   formatMinutes,
   getDurationMinutes,
-  getSleepDurationChartData,
+  getRollingSleepPeriod,
+  getSleepChartData,
   isValidDate,
   validateEntries,
   validateEntry,
@@ -39,6 +40,8 @@ test("entry validation recalculates durations and rejects invalid values", () =>
   assert.equal(validateEntry({ ...validEntry, awake: 485 }), null);
   assert.equal(validateEntry({ ...validEntry, awake: "NaN" }), null);
   assert.equal(validateEntry({ ...validEntry, nap: -5 }), null);
+  assert.equal(validateEntry({ ...validEntry, quality: undefined }).quality, null);
+  assert.equal(validateEntry({ ...validEntry, quality: 6 }), null);
   assert.equal(validateEntry({ ...validEntry, date: "2026-02-30" }), null);
   assert.equal(isValidDate("2024-02-29"), true);
 });
@@ -55,6 +58,7 @@ test("statistics exclude missing values and handle empty and single-night datase
     averageTotal: null,
     averageEffective: null,
     averageAwake: null,
+    averageNap: null,
     averageQuality: null,
   });
   assert.deepEqual(calculateSleepStatistics([{
@@ -67,6 +71,7 @@ test("statistics exclude missing values and handle empty and single-night datase
     averageTotal: 480,
     averageEffective: 450,
     averageAwake: 30,
+    averageNap: null,
     averageQuality: 4,
   });
   assert.deepEqual(calculateSleepStatistics([
@@ -77,6 +82,7 @@ test("statistics exclude missing values and handle empty and single-night datase
     averageTotal: 450,
     averageEffective: 450,
     averageAwake: 30,
+    averageNap: null,
     averageQuality: 5,
   });
 });
@@ -89,15 +95,54 @@ test("duration formatting avoids non-finite and negative output", () => {
   assert.equal(formatMinutes(-5), "–");
 });
 
-test("chart data is chronological and uses the same minimum scale as the statistics view", () => {
-  const data = getSleepDurationChartData([
-    { date: "2026-10-19", effective: 300 },
-    { date: "2026-10-18", effective: 450 },
-  ]);
+test("rolling sleep period contains chronological calendar days and preserves missing versus zero values", () => {
+  const period = getRollingSleepPeriod([
+    { ...validEntry, date: "2026-10-19", effective: 450, total: 480, nap: 0 },
+    { ...validEntry, date: "2026-10-07", effective: 300, total: 330, awake: 30, nap: 20 },
+    { ...validEntry, date: "2026-10-06", effective: 200, total: 240 },
+  ], "2026-10-20");
 
-  assert.deepEqual(data.chronological.map(({ date }) => date), ["2026-10-18", "2026-10-19"]);
-  assert.equal(data.maxMinutes, 480);
-  assert.equal(getSleepDurationChartData([]).maxMinutes, 480);
+  assert.equal(period.startDate, "2026-10-07");
+  assert.equal(period.endDate, "2026-10-20");
+  assert.equal(period.days.length, 14);
+  assert.equal(period.days[0].date, "2026-10-07");
+  assert.equal(period.days.at(-1).date, "2026-10-20");
+  assert.equal(period.days[0].awake, 30);
+  assert.equal(period.days[0].nap, 20);
+  assert.equal(period.days[1].entry, null);
+  assert.equal(period.days[1].nap, null);
+  assert.equal(period.days[12].awake, 30);
+  assert.equal(period.days[12].nap, 0);
+  assert.equal(period.nights.length, 2);
+  assert.equal(period.statistics.nights, 2);
+  assert.equal(period.statistics.averageNap, 10);
+  assert.equal(period.statistics.averageQuality, 4);
+});
+
+test("rolling period boundaries handle month and year changes", () => {
+  const yearEnd = getRollingSleepPeriod([], "2027-01-05");
+  assert.equal(yearEnd.startDate, "2026-12-23");
+  assert.deepEqual(
+    [yearEnd.days[0].date, yearEnd.days.at(-1).date],
+    ["2026-12-23", "2027-01-05"]
+  );
+});
+
+test("chart data includes every calendar day while excluding missing values from its scale", () => {
+  const period = getRollingSleepPeriod([
+    { ...validEntry, date: "2026-10-19", effective: 300 },
+    { ...validEntry, date: "2026-10-18", effective: 450 },
+  ], "2026-10-19");
+  const data = getSleepChartData(period.days, "effective");
+  const awakeData = getSleepChartData(period.days, "awake");
+
+  assert.equal(data.chronological.length, 14);
+  assert.equal(data.chronological[0].date, "2026-10-06");
+  assert.equal(data.chronological.at(-1).date, "2026-10-19");
+  assert.equal(data.chronological[12].value, 450);
+  assert.equal(data.maxValue, 480);
+  assert.equal(awakeData.chronological[0].value, null);
+  assert.equal(awakeData.maxValue, 60);
 });
 
 test("translation dictionaries have matching keys and fall back to German", () => {

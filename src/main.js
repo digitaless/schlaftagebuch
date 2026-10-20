@@ -7,17 +7,17 @@ import {
   translate,
 } from "./i18n.js";
 import {
-  calculateSleepStatistics,
   DEFAULT_SETTINGS,
   formatMinutes,
+  getRollingSleepPeriod,
+  getSleepChartData,
   getDurationMinutes,
   getQualityLabel,
-  getSleepDurationChartData,
   isValidDate,
   isValidSettings,
   isValidTime,
   MAX_NOTE_LENGTH,
-  STATS_NIGHT_COUNT,
+  STATS_DAY_COUNT,
   validateEntries,
   validateEntry,
 } from "./sleep-data.js";
@@ -241,20 +241,27 @@ function escapeHtml(text) {
   return text.replace(/[&<>"']/g, (char) => replacements[char]);
 }
 
-function renderSleepDurationChart(nights) {
-  if (!nights.length) return "";
-  const { chronological, maxMinutes } = getSleepDurationChartData(nights);
+function renderSleepChart(days, property) {
+  const { chronological, maxValue } = getSleepChartData(days, property);
   const MAX_BAR_HEIGHT_PX = 150;
   const barsHtml = chronological
-    .map((entry) => {
-      const heightPx = Math.max(2, (entry.effective / maxMinutes) * MAX_BAR_HEIGHT_PX);
-      return `<div class="bar" style="height:${heightPx}px"><span>${formatMinutes(entry.effective, language)}</span></div>`;
+    .map(({ date, value }) => {
+      const missing = value == null;
+      const heightPx = missing ? 0 : Math.max(2, (value / maxValue) * MAX_BAR_HEIGHT_PX);
+      const dateLabel = formatDate(new Date(`${date}T12:00:00`), language, { day: "2-digit" });
+      const unit = property === "quality" ? t("stats.qualityUnit") : t("time.minutes");
+      const valueLabel = missing ? t("stats.missing") : formatNumber(value, language);
+      const accessibleValue = missing ? valueLabel : `${valueLabel} ${unit}`;
+      return `<div class="bar${missing ? " bar-missing" : ""}" style="height:${heightPx}px" title="${date}: ${accessibleValue}" aria-label="${date}: ${accessibleValue}"><span>${valueLabel}</span></div>`;
     })
     .join("");
   const labelsHtml = chronological
-    .map((entry) => `<div>${formatDate(new Date(`${entry.date}T12:00:00`), language, { day: "2-digit", month: "2-digit" })}</div>`)
+    .map(({ date }) => `<div title="${formatDate(new Date(`${date}T12:00:00`), language)}">${formatDate(new Date(`${date}T12:00:00`), language, { day: "2-digit" })}</div>`)
     .join("");
-  return `<div class="bar-wrap">${barsHtml}</div><div class="bar-labels">${labelsHtml}</div>`;
+  const emptyMessage = chronological.some(({ value }) => Number.isFinite(value))
+    ? ""
+    : `<p class="small chart-empty">${t("stats.noMeasurements")}</p>`;
+  return `${emptyMessage}<div class="bar-wrap">${barsHtml}</div><div class="bar-labels">${labelsHtml}</div>`;
 }
 
 /* --------------------------------------------------------------------------
@@ -683,7 +690,9 @@ function renderHistoryEntry(entry) {
     month: "2-digit",
     year: "numeric",
   });
-  const stars = "★".repeat(entry.quality) + "☆".repeat(5 - entry.quality);
+  const stars = entry.quality == null
+    ? t("history.qualityMissing")
+    : "★".repeat(entry.quality) + "☆".repeat(5 - entry.quality);
   const notesSuffix = entry.notes ? ` · ${escapeHtml(entry.notes)}` : "";
   const medicationSuffix = entry.medication
     ? ` · ${t("history.medication", { name: escapeHtml(entry.medicationName) })}`
@@ -748,24 +757,26 @@ function handleHistoryClick(event) {
    -------------------------------------------------------------------------- */
 
 function renderStats() {
-  const recentNights = entries.slice(0, STATS_NIGHT_COUNT);
-  const statistics = calculateSleepStatistics(recentNights);
-
-  if (!recentNights.length) {
-    dom.statCards.innerHTML =
-      `<div class="empty" style="grid-column:1/-1">${t("stats.empty")}</div>`;
-    dom.chart.innerHTML = "";
-    return;
-  }
+  const period = getRollingSleepPeriod(entries, formatLocalDate(new Date()), STATS_DAY_COUNT);
+  const { statistics } = period;
+  byId("statsPeriod").textContent = t("stats.period", {
+    start: formatDate(new Date(`${period.startDate}T12:00:00`), language),
+    end: formatDate(new Date(`${period.endDate}T12:00:00`), language),
+  });
 
   // Summary tiles
   dom.statCards.innerHTML = `
+    <div class="stat"><span class="small">${t("stats.averageTotal")}</span><b>${statistics.averageTotal == null ? "–" : formatMinutes(statistics.averageTotal, language)}</b></div>
     <div class="stat"><span class="small">${t("stats.averageEffective")}</span><b>${formatMinutes(statistics.averageEffective, language)}</b></div>
-    <div class="stat"><span class="small">${t("stats.averageQuality")}</span><b>${formatNumber(statistics.averageQuality, language, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 5</b></div>
-    <div class="stat"><span class="small">${t("stats.averageAwake")}</span><b>${formatNumber(statistics.averageAwake, language)} ${t("time.minutes")}</b></div>
-    <div class="stat"><span class="small">${t("stats.nights")}</span><b>${formatNumber(recentNights.length, language)}</b></div>`;
+    <div class="stat"><span class="small">${t("stats.averageAwake")}</span><b>${statistics.averageAwake == null ? "–" : `${formatNumber(statistics.averageAwake, language)} ${t("time.minutes")}`}</b></div>
+    <div class="stat"><span class="small">${t("stats.averageNap")}</span><b>${statistics.averageNap == null ? "–" : `${formatNumber(statistics.averageNap, language)} ${t("time.minutes")}`}</b></div>
+    <div class="stat"><span class="small">${t("stats.averageQuality")}</span><b>${statistics.averageQuality == null ? "–" : `${formatNumber(statistics.averageQuality, language, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} / 5`}</b></div>
+    <div class="stat"><span class="small">${t("stats.nights")}</span><b>${formatNumber(statistics.nights, language)}</b></div>`;
 
-  dom.chart.innerHTML = renderSleepDurationChart(recentNights);
+  dom.chart.innerHTML = renderSleepChart(period.days, "effective");
+  byId("chartAwake").innerHTML = renderSleepChart(period.days, "awake");
+  byId("chartNap").innerHTML = renderSleepChart(period.days, "nap");
+  byId("chartQuality").innerHTML = renderSleepChart(period.days, "quality");
 }
 
 /* --------------------------------------------------------------------------
