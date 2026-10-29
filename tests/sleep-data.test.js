@@ -149,13 +149,16 @@ test("translation dictionaries have matching keys and fall back to German", () =
   const germanKeys = getTranslationKeys("de").sort();
   assert.deepEqual(getTranslationKeys("fr").sort(), germanKeys);
   assert.deepEqual(getTranslationKeys("en").sort(), germanKeys);
+  assert.deepEqual(getTranslationKeys("it").sort(), germanKeys);
   assert.equal(translate("fr", "intro.title"), "Bienvenue dans votre journal du sommeil");
+  assert.equal(translate("it", "intro.title"), "Benvenuto nel tuo diario del sonno");
   assert.equal(
     translate("de", "intro.settings"),
-    "Passe die Einstellungen an, exportiere oder importiere deine Daten und wähle deine bevorzugte Sprache: Deutsch, Französisch oder Englisch."
+    "Passe die Einstellungen an, exportiere oder importiere deine Daten und wähle deine bevorzugte Sprache: Deutsch, Französisch, Englisch oder Italienisch."
   );
-  assert.match(translate("fr", "intro.settings"), /allemand, français ou anglais/);
-  assert.match(translate("en", "intro.settings"), /German, French or English/);
+  assert.match(translate("fr", "intro.settings"), /allemand, français, anglais ou italien/);
+  assert.match(translate("en", "intro.settings"), /German, French, English or Italian/);
+  assert.match(translate("it", "intro.settings"), /tedesco, francese, inglese o italiano/);
   assert.equal(translate("fr", "missing.key"), "missing.key");
   assert.equal(
     translate("en", "error.notesLength", { max: 500 }),
@@ -168,7 +171,10 @@ test("date, number and duration formatting use the selected locale without chang
   assert.equal(formatDate(date, "de"), "19.10.2026");
   assert.equal(formatDate(date, "fr"), "19/10/2026");
   assert.equal(formatDate(date, "en"), "10/19/2026");
+  assert.equal(formatDate(date, "it"), "19/10/2026");
   assert.equal(formatNumber(1234.5, "de"), "1'234.5");
+  assert.equal(formatNumber(1234.5, "it"), "1.234,5");
   assert.equal(formatMinutes(425, "fr"), "7 h 05 min");
   assert.equal(formatMinutes(425, "en"), "7 h 05 min");
+  assert.equal(formatMinutes(425, "it"), "7 h 05 min");
 });
