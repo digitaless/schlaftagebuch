@@ -150,6 +150,15 @@ test("translation dictionaries have matching keys and fall back to German", () =
   assert.deepEqual(getTranslationKeys("fr").sort(), germanKeys);
   assert.deepEqual(getTranslationKeys("en").sort(), germanKeys);
   assert.deepEqual(getTranslationKeys("it").sort(), germanKeys);
+  for (const language of ["fr", "en", "it"]) {
+    for (const key of germanKeys) {
+      assert.deepEqual(
+        [...translate(language, key).matchAll(/\{(\w+)\}/g)].map(([, name]) => name).sort(),
+        [...translate("de", key).matchAll(/\{(\w+)\}/g)].map(([, name]) => name).sort(),
+        `${language}: ${key}`
+      );
+    }
+  }
   assert.equal(translate("fr", "intro.title"), "Bienvenue dans votre journal du sommeil");
   assert.equal(translate("it", "intro.title"), "Benvenuto nel tuo diario del sonno");
   assert.equal(
