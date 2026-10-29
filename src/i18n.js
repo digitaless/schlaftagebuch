@@ -746,7 +746,7 @@ const translations = {
     "error.clear": "Impossibile eliminare le registrazioni. ({error})",
     "error.introRead": "Impossibile leggere la preferenza di visualizzazione dell'introduzione. ({error})",
     "error.introSave": "Impossibile salvare la preferenza di visualizzazione dell'introduzione. ({error})",
-    "error.importShape": "È previsto un'esportazione che contenga un elenco di registrazioni oppure un elenco di registrazioni senza altri dati.",
+    "error.importShape": "È prevista un'esportazione che contenga un elenco di registrazioni oppure un elenco di registrazioni senza altri dati.",
     "error.importEntry": "Almeno una registrazione contiene dati non validi o incompleti.",
     "error.importDuplicate": "Il backup contiene più registrazioni per la stessa data.",
     "error.importSettings": "Le impostazioni nel backup non sono valide.",
