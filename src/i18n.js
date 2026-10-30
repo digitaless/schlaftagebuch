@@ -1,6 +1,14 @@
 export const SUPPORTED_LANGUAGES = ["de", "fr", "en", "it"];
 export const LANGUAGE_NAMES = { de: "Deutsch", fr: "Français", en: "English", it: "Italiano" };
 
+export function getPreferredLanguage(preferences) {
+  for (const preference of preferences) {
+    const language = preference?.toLowerCase().split("-")[0];
+    if (SUPPORTED_LANGUAGES.includes(language)) return language;
+  }
+  return "de";
+}
+
 const translations = {
   de: {
     "meta.description": "Führe dein Schlaftagebuch privat und lokal auf deinem Gerät – ohne Konto, Tracking oder Cloud.",

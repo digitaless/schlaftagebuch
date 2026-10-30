@@ -10,7 +10,13 @@ import {
   validateEntries,
   validateEntry,
 } from "../src/sleep-data.js";
-import { formatDate, formatNumber, getTranslationKeys, translate } from "../src/i18n.js";
+import {
+  formatDate,
+  formatNumber,
+  getPreferredLanguage,
+  getTranslationKeys,
+  translate,
+} from "../src/i18n.js";
 
 const validEntry = {
   date: "2026-10-18",
@@ -186,4 +192,11 @@ test("date, number and duration formatting use the selected locale without chang
   assert.equal(formatMinutes(425, "fr"), "7 h 05 min");
   assert.equal(formatMinutes(425, "en"), "7 h 05 min");
   assert.equal(formatMinutes(425, "it"), "7 h 05 min");
+});
+
+test("browser language preferences select the first supported language", () => {
+  assert.equal(getPreferredLanguage(["es-ES", "it-IT", "fr"]), "it");
+  assert.equal(getPreferredLanguage(["fr-CA", "en-US"]), "fr");
+  assert.equal(getPreferredLanguage(["es-ES"]), "de");
+  assert.equal(getPreferredLanguage([]), "de");
 });
