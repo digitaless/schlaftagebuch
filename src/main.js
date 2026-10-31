@@ -91,6 +91,7 @@ let sheepAnimationEndHandler = null;
 let sheepReducedMotionTimeout = null;
 let sheepKeydownHandler = null;
 let sheepReturnFocus = null;
+let settingsSavedTimeout = null;
 let morningSheepTimeout = null;
 let morningSheepReturnFocus = null;
 let morningSheepKeydownHandler = null;
@@ -805,7 +806,11 @@ function handleSaveSettings() {
   }
   if (!saveSettings(nextSettings)) return;
   renderWindowInfo();
+  clearTimeout(settingsSavedTimeout);
   dom.settingsSavedNotice.hidden = false;
+  settingsSavedTimeout = setTimeout(() => {
+    dom.settingsSavedNotice.hidden = true;
+  }, 2200);
   resetForm();
 }
 
@@ -979,6 +984,8 @@ function changeLanguage(nextLanguage) {
     return;
   }
 
+  clearTimeout(settingsSavedTimeout);
+  dom.settingsSavedNotice.hidden = true;
   language = nextLanguage;
   applyStaticTranslations();
   renderWindowInfo();
