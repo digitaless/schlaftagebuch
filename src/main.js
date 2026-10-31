@@ -2,6 +2,7 @@ import "./styles.css";
 import {
   formatDate,
   formatNumber,
+  getPreferredLanguage,
   LANGUAGE_NAMES,
   SUPPORTED_LANGUAGES,
   translate,
@@ -39,10 +40,12 @@ const LANGUAGE_STORAGE_KEY = "schlaftagebuch.language.v1";
 function readLanguage() {
   try {
     const storedLanguage = localStorage.getItem(LANGUAGE_STORAGE_KEY);
-    return SUPPORTED_LANGUAGES.includes(storedLanguage) ? storedLanguage : "de";
+    return SUPPORTED_LANGUAGES.includes(storedLanguage)
+      ? storedLanguage
+      : getPreferredLanguage([...navigator.languages, navigator.language]);
   } catch (error) {
     alert(translate("de", "error.languageRead", { error: error.message }));
-    return "de";
+    return getPreferredLanguage([...navigator.languages, navigator.language]);
   }
 }
 
