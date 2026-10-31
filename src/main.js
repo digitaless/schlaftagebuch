@@ -176,6 +176,9 @@ const dom = {
   importFile: byId("importFile"),
   importRawData: byId("importRawData"),
   cancelImportButton: byId("cancelImport"),
+  clearDialog: byId("clearDialog"),
+  cancelClearButton: byId("cancelClear"),
+  confirmClearButton: byId("confirmClear"),
   welcomeDialog: byId("welcomeDialog"),
   welcomeDismissCheckbox: byId("welcomeDismissCheckbox"),
   closeWelcomeButton: byId("closeWelcome"),
@@ -936,14 +939,17 @@ function resetImportForm() {
 }
 
 function handleClearAllData() {
-  if (!confirm(t("confirm.clear"))) return;
+  dom.clearDialog.showModal();
+}
 
+function confirmClearAllData() {
   try {
     localStorage.removeItem(ENTRIES_STORAGE_KEY);
   } catch (error) {
     alert(t("error.clear", { error: error.message }));
     return;
   }
+  dom.clearDialog.close();
   entries = [];
   resetForm();
   renderHistory();
@@ -1097,6 +1103,8 @@ function bindEvents() {
   dom.cancelImportButton.addEventListener("click", () => dom.importDialog.close());
   dom.importDialog.addEventListener("close", resetImportForm);
   dom.clearButton.addEventListener("click", handleClearAllData);
+  dom.cancelClearButton.addEventListener("click", () => dom.clearDialog.close());
+  dom.confirmClearButton.addEventListener("click", confirmClearAllData);
   dom.closeWelcomeButton.addEventListener("click", () => dom.welcomeDialog.close());
   dom.welcomeStartButton.addEventListener("click", () => dom.welcomeDialog.close());
   dom.welcomeDialog.addEventListener("close", handleWelcomeClosed);

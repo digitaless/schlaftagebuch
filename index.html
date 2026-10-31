@@ -250,6 +250,17 @@
 
   </main>
 
+  <dialog id="clearDialog" aria-labelledby="clearDialogTitle" aria-describedby="clearDialogDescription">
+    <div class="card">
+      <h2 id="clearDialogTitle" data-i18n="settings.clear">Alle Daten löschen</h2>
+      <p id="clearDialogDescription" class="small" data-i18n="confirm.clear">Wirklich alle gespeicherten Schlafeinträge löschen? Deine Einstellungen bleiben erhalten.</p>
+      <div class="import-actions">
+        <button type="button" class="secondary" id="cancelClear" data-i18n="import.cancel">Abbrechen</button>
+        <button type="button" class="primary" id="confirmClear" data-i18n="clear.confirm">Löschen</button>
+      </div>
+    </div>
+  </dialog>
+
   <dialog id="sheepDialog" class="sheep-dialog" aria-labelledby="sheepTitle" aria-describedby="sheepDescription">
     <div class="sheep-dialog__content">
       <div class="sheep-dialog__header">
