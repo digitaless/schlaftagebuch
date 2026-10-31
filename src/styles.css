@@ -225,10 +225,18 @@ h3 {
 .morning-snore {
   fill: #687b95;
   font: 700 17px system-ui, sans-serif;
-  opacity: 0.8;
+  opacity: 0;
   transform-box: fill-box;
   transform-origin: center;
+}
+
+.morning-scene--sleeping .morning-snore {
+  opacity: 0.8;
   animation: morning-snore 2.2s ease-in-out infinite;
+}
+
+.morning-scene:not(.morning-scene--sleeping) .morning-snore {
+  opacity: 0;
 }
 
 .morning-sheep {
@@ -275,10 +283,6 @@ h3 {
 .morning-scene--negotiating .morning-sheep,
 .morning-scene--sleeping .morning-sheep {
   transform: none;
-}
-
-.morning-scene--negotiating .morning-snore {
-  opacity: 0.5;
 }
 
 .morning-scene--standing .morning-sheep,
@@ -1141,7 +1145,7 @@ button.secondary {
   }
 
   .morning-sheep,
-  .morning-snore,
+  .morning-scene--sleeping .morning-snore,
   .morning-scene--flopping .morning-sheep,
   .morning-scene--standing .morning-stretch,
   .morning-scene--ready .morning-sheep {
@@ -1149,7 +1153,7 @@ button.secondary {
     transition: none;
   }
 
-  .morning-snore {
+  .morning-scene--sleeping .morning-snore {
     opacity: 0.6;
     transform: none;
   }
