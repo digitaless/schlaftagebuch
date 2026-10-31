@@ -160,6 +160,7 @@ const dom = {
   defaultStart: byId("defaultStart"),
   defaultEnd: byId("defaultEnd"),
   languageSelect: byId("language"),
+  settingsSavedNotice: byId("settingsSavedNotice"),
   saveSettingsButton: byId("saveSettings"),
   exportButton: byId("export"),
   exportPdfButton: byId("exportPdf"),
@@ -804,7 +805,7 @@ function handleSaveSettings() {
   }
   if (!saveSettings(nextSettings)) return;
   renderWindowInfo();
-  alert(t("notice.settingsSaved"));
+  dom.settingsSavedNotice.hidden = false;
   resetForm();
 }
 
@@ -973,7 +974,7 @@ function changeLanguage(nextLanguage) {
   try {
     localStorage.setItem(LANGUAGE_STORAGE_KEY, nextLanguage);
   } catch (error) {
-    alert(t("error.languageSave", { error: error.message }));
+    alert(translate(nextLanguage, "error.languageSave", { error: error.message }));
     dom.languageSelect.value = language;
     return;
   }
