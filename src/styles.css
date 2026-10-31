@@ -272,6 +272,10 @@ h3 {
   opacity: 0;
 }
 
+.morning-scene--ready .morning-happy-mouth {
+  opacity: 1;
+}
+
 .morning-scene--sitting .morning-sheep {
   transform: translateY(-20px) rotate(-8deg);
 }
@@ -290,13 +294,10 @@ h3 {
   transform: translate(47px, -35px);
 }
 
-.morning-scene--standing .morning-stretch {
-  opacity: 1;
-  animation: morning-stretch 900ms ease-in-out;
-}
-
-.morning-scene--ready .morning-happy-mouth {
-  opacity: 1;
+.morning-scene--standing .morning-stretch,
+.morning-scene--ready .morning-stretch {
+  opacity: 0;
+  animation: none;
 }
 
 .morning-scene--ready .morning-sheep {
@@ -342,10 +343,6 @@ h3 {
 @keyframes morning-flop {
   45% { transform: translateY(-22px) rotate(-7deg); }
   100% { transform: none; }
-}
-
-@keyframes morning-stretch {
-  50% { transform: translateY(-7px) scale(1.04); }
 }
 
 @keyframes morning-celebrate {
@@ -1147,7 +1144,6 @@ button.secondary {
   .morning-sheep,
   .morning-scene--sleeping .morning-snore,
   .morning-scene--flopping .morning-sheep,
-  .morning-scene--standing .morning-stretch,
   .morning-scene--ready .morning-sheep {
     animation: none;
     transition: none;
