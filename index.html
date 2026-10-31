@@ -343,24 +343,26 @@
   </dialog>
 
   <dialog id="importDialog" class="no-print" aria-labelledby="importTitle">
-    <div class="card">
+    <form id="importForm" class="card">
       <h2 id="importTitle" data-i18n="import.title">Daten importieren / wiederherstellen</h2>
-      <p class="small" data-i18n="import.warning">Der Import ersetzt die gespeicherten Einträge und Einstellungen. Vorhandene Daten werden erst nach deiner Bestätigung ersetzt.</p>
+      <p class="small" data-i18n="import.warning">Der Import ersetzt die gespeicherten Einträge und Einstellungen. Vorhandene Daten werden erst ersetzt, wenn du OK auswählst.</p>
 
       <div class="field">
         <label for="importFile" data-i18n="import.fileLabel">JSON-Datei auswählen</label>
         <input id="importFile" type="file" accept="application/json,.json">
-        <button type="button" class="secondary" id="importJson" data-i18n="import.fileButton">JSON-Datei importieren</button>
       </div>
 
       <div class="field import-raw">
         <label for="importRawData" data-i18n="import.rawLabel">Rohdaten aus einer Sicherung einfügen</label>
         <textarea id="importRawData" rows="7" placeholder='{"settings":{"start":"23:00","end":"07:00"},"entries":[...]}' data-i18n-placeholder="import.rawPlaceholder"></textarea>
-        <button type="button" class="secondary" id="restoreRaw" data-i18n="import.restore">Rohdaten wiederherstellen</button>
       </div>
 
-      <button type="button" class="secondary" id="cancelImport" data-i18n="import.cancel">Abbrechen</button>
-    </div>
+      <p id="importError" class="import-error" role="alert" hidden></p>
+      <div class="import-actions">
+        <button type="submit" class="primary" data-i18n="import.ok">OK</button>
+        <button type="button" class="secondary" id="cancelImport" data-i18n="import.cancel">Abbrechen</button>
+      </div>
+    </form>
   </dialog>
 
   <script type="module" src="/src/main.js"></script>

@@ -171,10 +171,10 @@ const dom = {
   importButton: byId("import"),
   clearButton: byId("clear"),
   importDialog: byId("importDialog"),
+  importForm: byId("importForm"),
+  importError: byId("importError"),
   importFile: byId("importFile"),
-  importJsonButton: byId("importJson"),
   importRawData: byId("importRawData"),
-  restoreRawButton: byId("restoreRaw"),
   cancelImportButton: byId("cancelImport"),
   welcomeDialog: byId("welcomeDialog"),
   welcomeDismissCheckbox: byId("welcomeDismissCheckbox"),
@@ -859,20 +859,13 @@ function parseImportData(rawData) {
 }
 
 function replaceWithImportedData(importedData) {
-  if (entries.length || settings.start !== DEFAULT_SETTINGS.start || settings.end !== DEFAULT_SETTINGS.end) {
-    if (!confirm(t("confirm.importReplace"))) {
-      return;
-    }
-  }
-
   let previousEntries;
   let previousSettings;
   try {
     previousSettings = localStorage.getItem(SETTINGS_STORAGE_KEY);
     previousEntries = localStorage.getItem(ENTRIES_STORAGE_KEY);
   } catch (error) {
-    alert(t("error.importReadStorage", { error: error.message }));
-    return;
+    throw new Error(t("error.importReadStorage", { error: error.message }));
   }
 
   let settingsUpdated = false;
@@ -893,11 +886,11 @@ function replaceWithImportedData(importedData) {
         else localStorage.setItem(ENTRIES_STORAGE_KEY, previousEntries);
       }
     } catch (rollbackError) {
-      alert(t("error.importRollback", { error: error.message, rollbackError: rollbackError.message }));
-      return;
+      throw new Error(
+        t("error.importRollback", { error: error.message, rollbackError: rollbackError.message })
+      );
     }
-    alert(t("error.importPreserved", { error: error.message }));
-    return;
+    throw new Error(t("error.importPreserved", { error: error.message }));
   }
 
   entries = importedData.entries;
@@ -908,38 +901,38 @@ function replaceWithImportedData(importedData) {
   renderHistory();
   renderStats();
   dom.importDialog.close();
-  dom.importRawData.value = "";
-  dom.importFile.value = "";
-  alert(t("notice.importSuccess"));
 }
 
 function handleImportText(rawData) {
   try {
     replaceWithImportedData(parseImportData(rawData));
   } catch (error) {
-    alert(t("error.importInvalid", { error: error.message }));
+    dom.importError.textContent = error.message;
+    dom.importError.hidden = false;
   }
 }
 
-async function handleImportFile() {
+async function handleImportConfirmation() {
   const file = dom.importFile.files && dom.importFile.files[0];
-  if (!file) {
-    alert(t("error.importFileRequired"));
+  const rawData = dom.importRawData.value.trim();
+  if (!file && !rawData) {
+    dom.importError.textContent = t("error.importDataRequired");
+    dom.importError.hidden = false;
     return;
   }
+
   try {
-    handleImportText(await file.text());
+    handleImportText(file ? await file.text() : rawData);
   } catch (error) {
-    alert(t("error.importFileRead", { error: error.message }));
+    dom.importError.textContent = t("error.importFileRead", { error: error.message });
+    dom.importError.hidden = false;
   }
 }
 
-function handleRestoreRawData() {
-  if (!dom.importRawData.value.trim()) {
-    alert(t("error.importRawRequired"));
-    return;
-  }
-  handleImportText(dom.importRawData.value);
+function resetImportForm() {
+  dom.importForm.reset();
+  dom.importError.textContent = "";
+  dom.importError.hidden = true;
 }
 
 function handleClearAllData() {
@@ -1087,11 +1080,22 @@ function bindEvents() {
   dom.morningSheepDialog.addEventListener("click", (event) => {
     if (event.target === dom.morningSheepDialog) dom.morningSheepDialog.close();
   });
-  dom.importButton.addEventListener("click", () => dom.importDialog.showModal());
-  dom.importJsonButton.addEventListener("click", () => dom.importFile.click());
-  dom.importFile.addEventListener("change", handleImportFile);
-  dom.restoreRawButton.addEventListener("click", handleRestoreRawData);
+  dom.importButton.addEventListener("click", () => {
+    resetImportForm();
+    dom.importDialog.showModal();
+  });
+  dom.importForm.addEventListener("submit", (event) => {
+    event.preventDefault();
+    void handleImportConfirmation();
+  });
+  dom.importFile.addEventListener("change", () => {
+    if (dom.importFile.files?.length) dom.importRawData.value = "";
+  });
+  dom.importRawData.addEventListener("input", () => {
+    if (dom.importRawData.value.trim()) dom.importFile.value = "";
+  });
   dom.cancelImportButton.addEventListener("click", () => dom.importDialog.close());
+  dom.importDialog.addEventListener("close", resetImportForm);
   dom.clearButton.addEventListener("click", handleClearAllData);
   dom.closeWelcomeButton.addEventListener("click", () => dom.welcomeDialog.close());
   dom.welcomeStartButton.addEventListener("click", () => dom.welcomeDialog.close());

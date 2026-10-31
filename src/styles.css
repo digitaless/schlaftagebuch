@@ -828,6 +828,23 @@ dialog::backdrop {
   margin: 18px 0;
 }
 
+.import-error {
+  margin: 0;
+  color: #b91c1c;
+}
+
+.import-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.import-actions .primary {
+  width: auto;
+  min-width: 90px;
+}
+
 .small {
   font-size: 13px;
   color: var(--muted);
