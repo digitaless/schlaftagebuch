@@ -410,19 +410,21 @@ function updateMedicationFields(copyPreviousMedication = false) {
   }
 }
 
-function createSheepMarkup() {
-  return Array.from({ length: SHEEP_COUNT }, (_, index) => `
-    <svg class="count-sheep" data-sheep-index="${index}" style="--sheep-index:${index};--sheep-delay:${index * 1.5}s" viewBox="0 0 74 56" aria-hidden="true" focusable="false">
-      <ellipse cx="34" cy="34" rx="24" ry="16" fill="#f8fafc"/>
-      <circle cx="18" cy="26" r="10" fill="#fff"/>
-      <circle cx="30" cy="20" r="11" fill="#fff"/>
-      <circle cx="44" cy="21" r="11" fill="#fff"/>
-      <circle cx="53" cy="29" r="9" fill="#fff"/>
-      <ellipse cx="57" cy="30" rx="9" ry="11" fill="#efd6c2"/>
-      <ellipse cx="50" cy="22" rx="4" ry="2.5" fill="#efd6c2" transform="rotate(-28 50 22)"/>
-      <circle cx="60" cy="28" r="1.5" fill="#26364f"/>
-      <path d="M59 34q3 2 5 0M21 44v8m12-6v6m15-9v9" fill="none" stroke="#d8dce4" stroke-width="3" stroke-linecap="round"/>
-    </svg>`).join("");
+function createSheepMarkup(count) {
+  return Array.from({ length: count }, (_, index) => `
+    <div class="count-sheep" style="--sheep-index:${index}" aria-hidden="true">
+      <svg class="count-sheep-art" viewBox="0 0 74 56" focusable="false">
+        <ellipse cx="34" cy="34" rx="24" ry="16" fill="#f8fafc"/>
+        <circle cx="18" cy="26" r="10" fill="#fff"/>
+        <circle cx="30" cy="20" r="11" fill="#fff"/>
+        <circle cx="44" cy="21" r="11" fill="#fff"/>
+        <circle cx="53" cy="29" r="9" fill="#fff"/>
+        <ellipse cx="57" cy="30" rx="9" ry="11" fill="#efd6c2"/>
+        <ellipse cx="50" cy="22" rx="4" ry="2.5" fill="#efd6c2" transform="rotate(-28 50 22)"/>
+        <circle cx="60" cy="28" r="1.5" fill="#26364f"/>
+        <path d="M59 34q3 2 5 0M21 44v8m12-6v6m15-9v9" fill="none" stroke="#d8dce4" stroke-width="3" stroke-linecap="round"/>
+      </svg>
+    </div>`).join("");
 }
 
 function updateSheepCount() {
@@ -440,7 +442,7 @@ function updateSheepCount() {
 
 function cleanupSheepAnimation() {
   if (sheepAnimationEndHandler) {
-    dom.sheepTrack.removeEventListener("animationend", sheepAnimationEndHandler);
+    dom.sheepTrack.removeEventListener("animationiteration", sheepAnimationEndHandler);
     sheepAnimationEndHandler = null;
   }
   if (sheepReducedMotionTimeout !== null) {
@@ -467,41 +469,33 @@ function countReducedMotionSheep() {
   sheepReducedMotionTimeout = setTimeout(countReducedMotionSheep, SHEEP_STEP_MS);
 }
 
-function startNextSheepJump() {
-  const sheep = dom.sheepTrack.querySelectorAll(".count-sheep")[sheepCount % SHEEP_COUNT];
-  sheep?.classList.add("is-jumping");
-}
-
-function handleSheepJumpEnd(event) {
-  const sheepIndex = Number(event.target.dataset.sheepIndex);
+function handleSheepJumpIteration(event) {
   if (
-    !Number.isInteger(sheepIndex) ||
-    sheepIndex !== sheepCount % SHEEP_COUNT ||
+    event.target !== dom.sheepTrack.firstElementChild ||
     !event.target.classList.contains("is-jumping")
   ) {
     return;
   }
 
-  event.target.classList.remove("is-jumping");
   sheepCount += 1;
   updateSheepCount();
-  startNextSheepJump();
 }
 
 function startSheepCounting() {
   cleanupSheepAnimation();
   sheepCount = 0;
   updateSheepCount();
-  dom.sheepTrack.innerHTML = createSheepMarkup();
+  const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  dom.sheepTrack.innerHTML = createSheepMarkup(reducedMotion ? SHEEP_COUNT : 1);
 
-  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+  if (reducedMotion) {
     sheepReducedMotionTimeout = setTimeout(countReducedMotionSheep, SHEEP_STEP_MS);
     return;
   }
 
-  sheepAnimationEndHandler = handleSheepJumpEnd;
-  dom.sheepTrack.addEventListener("animationend", sheepAnimationEndHandler);
-  startNextSheepJump();
+  sheepAnimationEndHandler = handleSheepJumpIteration;
+  dom.sheepTrack.addEventListener("animationiteration", sheepAnimationEndHandler);
+  dom.sheepTrack.firstElementChild.classList.add("is-jumping");
 }
 
 function openSheepCounter() {

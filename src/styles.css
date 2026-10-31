@@ -753,9 +753,16 @@ dialog::backdrop {
   opacity: 0;
 }
 
+.count-sheep-art {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
 .count-sheep.is-jumping {
   opacity: 1;
-  animation: sheep-hop 4s ease-in-out both;
+  animation: sheep-hop 4s ease-in-out infinite;
+  will-change: transform, translate, opacity;
 }
 
 @keyframes sheep-hop {
@@ -765,7 +772,7 @@ dialog::backdrop {
     transform: translateY(0) rotate(0);
   }
 
-  10% {
+  5% {
     opacity: 1;
   }
 
@@ -782,8 +789,16 @@ dialog::backdrop {
     transform: translateY(0) rotate(0);
   }
 
-  100% {
+  95% {
     opacity: 1;
+  }
+
+  99.9% {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 0;
     translate: calc(100cqw - 60px) 0;
     transform: translateY(0) rotate(0);
   }
@@ -1159,6 +1174,7 @@ button.secondary {
     left: calc(var(--sheep-index) * 9%);
     opacity: 0;
     transform: none;
+    translate: none;
   }
 
   .count-sheep.is-jumping {
