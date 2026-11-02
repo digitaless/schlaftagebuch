@@ -474,6 +474,7 @@ function countReducedMotionSheep() {
 
 function handleSheepJumpIteration(event) {
   if (
+    event.animationName !== "sheep-traverse" ||
     event.target !== dom.sheepTrack.firstElementChild ||
     !event.target.classList.contains("is-jumping")
   ) {
