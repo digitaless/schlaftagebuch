@@ -93,6 +93,36 @@ test("statistics exclude missing values and handle empty and single-night datase
   });
 });
 
+test("statistics calculate and round all averages while excluding invalid measurements", () => {
+  const nights = [
+    { total: 421, effective: 401, awake: 20, nap: 10, quality: 5 },
+    { total: 422, effective: 402, awake: 20, nap: 20, quality: 3 },
+  ];
+
+  assert.deepEqual(calculateSleepStatistics(nights), {
+    nights: 2,
+    averageTotal: 422,
+    averageEffective: 402,
+    averageAwake: 20,
+    averageNap: 15,
+    averageQuality: 4,
+  });
+});
+
+test("statistics preserve recorded zeros and reject non-finite or out-of-range values", () => {
+  assert.deepEqual(calculateSleepStatistics([
+    { total: 0, effective: 0, awake: 0, nap: 0, quality: 0 },
+    { total: Number.NaN, effective: Number.POSITIVE_INFINITY, awake: -1, nap: null, quality: 6 },
+  ]), {
+    nights: 2,
+    averageTotal: 0,
+    averageEffective: 0,
+    averageAwake: 0,
+    averageNap: 0,
+    averageQuality: null,
+  });
+});
+
 test("duration formatting avoids non-finite and negative output", () => {
   assert.equal(formatMinutes(0), "0 h 00 min");
   assert.equal(formatMinutes(425), "7 h 05 min");
@@ -134,6 +164,39 @@ test("rolling period boundaries handle month and year changes", () => {
   );
 });
 
+test("rolling period supports custom sizes, leap years and inclusive boundaries", () => {
+  const leapPeriod = getRollingSleepPeriod([
+    { ...validEntry, date: "2024-02-28", effective: 420 },
+    { ...validEntry, date: "2024-02-29", effective: 430 },
+    { ...validEntry, date: "2024-03-01", effective: 440 },
+    { ...validEntry, date: "2024-02-27", effective: 999 },
+  ], "2024-03-01", 3);
+
+  assert.equal(leapPeriod.startDate, "2024-02-28");
+  assert.deepEqual(leapPeriod.days.map(({ date }) => date), [
+    "2024-02-28",
+    "2024-02-29",
+    "2024-03-01",
+  ]);
+  assert.equal(leapPeriod.nights.length, 3);
+  assert.equal(leapPeriod.statistics.averageEffective, 430);
+});
+
+test("rolling period rejects invalid end dates and day counts", () => {
+  assert.throws(
+    () => getRollingSleepPeriod([], "2026-02-30"),
+    RangeError
+  );
+  assert.throws(
+    () => getRollingSleepPeriod([], "2026-10-19", 0),
+    RangeError
+  );
+  assert.throws(
+    () => getRollingSleepPeriod([], "2026-10-19", 1.5),
+    RangeError
+  );
+});
+
 test("chart data includes every calendar day while excluding missing values from its scale", () => {
   const period = getRollingSleepPeriod([
     { ...validEntry, date: "2026-10-19", effective: 300 },
@@ -149,6 +212,27 @@ test("chart data includes every calendar day while excluding missing values from
   assert.equal(data.maxValue, 480);
   assert.equal(awakeData.chronological[0].value, null);
   assert.equal(awakeData.maxValue, 60);
+});
+
+test("chart data uses property-specific scales and preserves chronological values", () => {
+  const days = [
+    { date: "2026-10-18", effective: 600, awake: 90, nap: 75, quality: 5 },
+    { date: "2026-10-19", effective: null, awake: 0, nap: null, quality: null },
+  ];
+
+  const effective = getSleepChartData(days, "effective");
+  const awake = getSleepChartData(days, "awake");
+  const nap = getSleepChartData(days, "nap");
+  const quality = getSleepChartData(days, "quality");
+
+  assert.deepEqual(effective.chronological, [
+    { date: "2026-10-18", value: 600 },
+    { date: "2026-10-19", value: null },
+  ]);
+  assert.equal(effective.maxValue, 600);
+  assert.equal(awake.maxValue, 90);
+  assert.equal(nap.maxValue, 75);
+  assert.equal(quality.maxValue, 5);
 });
 
 test("translation dictionaries have matching keys and fall back to German", () => {
