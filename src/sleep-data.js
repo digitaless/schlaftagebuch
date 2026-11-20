@@ -116,7 +116,9 @@ export function validateEntries(value) {
 }
 
 function averageOf(list, property) {
-  const values = list.map((entry) => entry[property]).filter(Number.isFinite);
+  const values = list
+    .map((entry) => entry[property])
+    .filter((value) => Number.isFinite(value) && value >= 0);
   return values.length
     ? Math.round(values.reduce((sum, value) => sum + value, 0) / values.length)
     : null;
