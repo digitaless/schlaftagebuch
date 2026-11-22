@@ -738,6 +738,7 @@ function deleteEntry(date) {
 
   const updatedEntries = entries.filter((entry) => entry.date !== date);
   if (!saveEntries(updatedEntries)) return;
+  if (editingDate === date) resetForm();
   renderHistory();
   renderStats();
 }
