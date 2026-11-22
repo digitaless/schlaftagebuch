@@ -832,7 +832,15 @@ function handleExport() {
 }
 
 function parseImportData(rawData) {
-  const parsed = JSON.parse(rawData);
+  let parsed;
+  try {
+    parsed = JSON.parse(rawData);
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error(t("error.importInvalidJson"));
+    }
+    throw error;
+  }
   const payload = Array.isArray(parsed)
     ? { entries: parsed, settings }
     : parsed;
