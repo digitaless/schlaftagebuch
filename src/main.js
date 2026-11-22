@@ -812,7 +812,6 @@ function handleSaveSettings() {
   settingsSavedTimeout = setTimeout(() => {
     dom.settingsSavedNotice.hidden = true;
   }, 2200);
-  resetForm();
 }
 
 /** Downloads settings and entries as a JSON file. */
