@@ -7,6 +7,7 @@ import {
   getRollingSleepPeriod,
   getSleepChartData,
   isValidDate,
+  MAX_NAP_MINUTES,
   validateEntries,
   validateEntry,
 } from "../src/sleep-data.js";
@@ -46,6 +47,8 @@ test("entry validation recalculates durations and rejects invalid values", () =>
   assert.equal(validateEntry({ ...validEntry, awake: 485 }), null);
   assert.equal(validateEntry({ ...validEntry, awake: "NaN" }), null);
   assert.equal(validateEntry({ ...validEntry, nap: -5 }), null);
+  assert.equal(validateEntry({ ...validEntry, nap: MAX_NAP_MINUTES }).nap, MAX_NAP_MINUTES);
+  assert.equal(validateEntry({ ...validEntry, nap: MAX_NAP_MINUTES + 5 }), null);
   assert.equal(validateEntry({ ...validEntry, quality: undefined }).quality, null);
   assert.equal(validateEntry({ ...validEntry, quality: 6 }), null);
   assert.equal(validateEntry({ ...validEntry, date: "2026-02-30" }), null);
