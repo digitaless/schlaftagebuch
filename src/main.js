@@ -17,6 +17,7 @@ import {
   isValidDate,
   isValidSettings,
   isValidTime,
+  MAX_NAP_MINUTES,
   MAX_NOTE_LENGTH,
   STATS_DAY_COUNT,
   validateEntries,
@@ -55,6 +56,8 @@ const t = (key, params) => translate(language, key, params);
 const SHEEP_COUNT = 10;
 const SHEEP_MESSAGE_COUNT = 11;
 const SHEEP_STEP_MS = 4000;
+let entriesStorageValid = true;
+
 function readStoredJSON(key, fallback, validator, description) {
   try {
     const raw = localStorage.getItem(key);
@@ -63,6 +66,7 @@ function readStoredJSON(key, fallback, validator, description) {
     if (!validator(value)) throw new Error(t("error.invalidStoredData"));
     return value;
   } catch (error) {
+    if (key === ENTRIES_STORAGE_KEY) entriesStorageValid = false;
     alert(
       t("error.storageRead", { description: t(description), error: error.message })
     );
@@ -277,7 +281,14 @@ function renderSleepChart(days, property) {
    Persistence
    -------------------------------------------------------------------------- */
 
+function ensureEntriesStorageValid() {
+  if (entriesStorageValid) return true;
+  alert(t("error.entriesUnavailable"));
+  return false;
+}
+
 function saveEntries(nextEntries = entries) {
+  if (!ensureEntriesStorageValid()) return false;
   try {
     localStorage.setItem(ENTRIES_STORAGE_KEY, JSON.stringify(nextEntries));
     entries = nextEntries;
@@ -620,8 +631,13 @@ function handleSaveEntry() {
     alert(t("error.awake"));
     return;
   }
-  if (!Number.isInteger(napMinutes) || napMinutes < 0 || napMinutes % 5 !== 0) {
-    alert(t("error.nap"));
+  if (
+    !Number.isInteger(napMinutes) ||
+    napMinutes < 0 ||
+    napMinutes > MAX_NAP_MINUTES ||
+    napMinutes % 5 !== 0
+  ) {
+    alert(t("error.nap", { max: MAX_NAP_MINUTES }));
     return;
   }
   if (!Number.isInteger(selectedQuality) || selectedQuality < 1 || selectedQuality > 5) {
@@ -738,6 +754,7 @@ function deleteEntry(date) {
 
   const updatedEntries = entries.filter((entry) => entry.date !== date);
   if (!saveEntries(updatedEntries)) return;
+  if (editingDate === date) resetForm();
   renderHistory();
   renderStats();
 }
@@ -788,6 +805,7 @@ function renderStats() {
    -------------------------------------------------------------------------- */
 
 async function handleExportPdf() {
+  if (!ensureEntriesStorageValid()) return;
   try {
     const { createSleepReport } = await import("./pdf-report.js");
     createSleepReport(entries, language).save("schlaftagebuch.pdf");
@@ -812,11 +830,11 @@ function handleSaveSettings() {
   settingsSavedTimeout = setTimeout(() => {
     dom.settingsSavedNotice.hidden = true;
   }, 2200);
-  resetForm();
 }
 
 /** Downloads settings and entries as a JSON file. */
 function handleExport() {
+  if (!ensureEntriesStorageValid()) return;
   const json = JSON.stringify({ settings, entries }, null, 2);
   const blob = new Blob([json], { type: "application/json" });
 
@@ -832,7 +850,15 @@ function handleExport() {
 }
 
 function parseImportData(rawData) {
-  const parsed = JSON.parse(rawData);
+  let parsed;
+  try {
+    parsed = JSON.parse(rawData);
+  } catch (error) {
+    if (error instanceof SyntaxError) {
+      throw new Error(t("error.importInvalidJson"));
+    }
+    throw error;
+  }
   const payload = Array.isArray(parsed)
     ? { entries: parsed, settings }
     : parsed;
@@ -893,6 +919,7 @@ function replaceWithImportedData(importedData) {
 
   entries = importedData.entries;
   settings = importedData.settings;
+  entriesStorageValid = true;
   dom.defaultStart.value = settings.start;
   dom.defaultEnd.value = settings.end;
   renderWindowInfo();
@@ -944,6 +971,7 @@ function confirmClearAllData() {
     alert(t("error.clear", { error: error.message }));
     return;
   }
+  entriesStorageValid = true;
   dom.clearDialog.close();
   entries = [];
   resetForm();

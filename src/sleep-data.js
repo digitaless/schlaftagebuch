@@ -1,5 +1,6 @@
 export const DEFAULT_SETTINGS = { start: "23:00", end: "07:00" };
 export const MAX_NOTE_LENGTH = 500;
+export const MAX_NAP_MINUTES = 1440;
 export const STATS_DAY_COUNT = 14;
 
 import { formatDuration, translate } from "./i18n.js";
@@ -75,6 +76,7 @@ export function validateEntry(value) {
     awake % 5 !== 0 ||
     !Number.isInteger(nap) ||
     nap < 0 ||
+    nap > MAX_NAP_MINUTES ||
     nap % 5 !== 0
   ) {
     return null;
@@ -83,6 +85,7 @@ export function validateEntry(value) {
   const windowStart = value.windowStart == null ? DEFAULT_SETTINGS.start : value.windowStart;
   const windowEnd = value.windowEnd == null ? DEFAULT_SETTINGS.end : value.windowEnd;
   if (!isValidTime(windowStart) || !isValidTime(windowEnd)) return null;
+  if (windowStart === windowEnd) return null;
   if (value.notes != null && typeof value.notes !== "string") return null;
   const notes = value.notes || "";
   if (notes.length > MAX_NOTE_LENGTH) return null;
