@@ -85,6 +85,7 @@ export function validateEntry(value) {
   const windowStart = value.windowStart == null ? DEFAULT_SETTINGS.start : value.windowStart;
   const windowEnd = value.windowEnd == null ? DEFAULT_SETTINGS.end : value.windowEnd;
   if (!isValidTime(windowStart) || !isValidTime(windowEnd)) return null;
+  if (windowStart === windowEnd) return null;
   if (value.notes != null && typeof value.notes !== "string") return null;
   const notes = value.notes || "";
   if (notes.length > MAX_NOTE_LENGTH) return null;
