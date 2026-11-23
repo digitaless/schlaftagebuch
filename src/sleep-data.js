@@ -67,8 +67,8 @@ export function validateEntry(value) {
 
   const total = getDurationMinutes(value.bed, value.wake);
   if (total == null || total <= 0) return null;
-  const awake = value.awake == null ? 0 : Number(value.awake);
-  const nap = value.nap == null ? 0 : Number(value.nap);
+  const awake = value.awake == null ? 0 : value.awake;
+  const nap = value.nap == null ? 0 : value.nap;
   if (
     !Number.isInteger(awake) ||
     awake < 0 ||

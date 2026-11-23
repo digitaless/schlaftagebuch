@@ -46,7 +46,9 @@ test("entry validation recalculates durations and rejects invalid values", () =>
   assert.equal(validateEntry({ ...validEntry, awake: -5 }), null);
   assert.equal(validateEntry({ ...validEntry, awake: 485 }), null);
   assert.equal(validateEntry({ ...validEntry, awake: "NaN" }), null);
+  assert.equal(validateEntry({ ...validEntry, awake: "15" }), null);
   assert.equal(validateEntry({ ...validEntry, nap: -5 }), null);
+  assert.equal(validateEntry({ ...validEntry, nap: "15" }), null);
   assert.equal(validateEntry({ ...validEntry, nap: MAX_NAP_MINUTES }).nap, MAX_NAP_MINUTES);
   assert.equal(validateEntry({ ...validEntry, nap: MAX_NAP_MINUTES + 5 }), null);
   assert.equal(validateEntry({ ...validEntry, quality: undefined }).quality, null);
