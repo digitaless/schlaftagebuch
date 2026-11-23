@@ -17,6 +17,7 @@ import {
   isValidDate,
   isValidSettings,
   isValidTime,
+  MAX_NAP_MINUTES,
   MAX_NOTE_LENGTH,
   STATS_DAY_COUNT,
   validateEntries,
@@ -630,8 +631,13 @@ function handleSaveEntry() {
     alert(t("error.awake"));
     return;
   }
-  if (!Number.isInteger(napMinutes) || napMinutes < 0 || napMinutes % 5 !== 0) {
-    alert(t("error.nap"));
+  if (
+    !Number.isInteger(napMinutes) ||
+    napMinutes < 0 ||
+    napMinutes > MAX_NAP_MINUTES ||
+    napMinutes % 5 !== 0
+  ) {
+    alert(t("error.nap", { max: MAX_NAP_MINUTES }));
     return;
   }
   if (!Number.isInteger(selectedQuality) || selectedQuality < 1 || selectedQuality > 5) {
