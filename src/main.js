@@ -55,6 +55,8 @@ const t = (key, params) => translate(language, key, params);
 const SHEEP_COUNT = 10;
 const SHEEP_MESSAGE_COUNT = 11;
 const SHEEP_STEP_MS = 4000;
+let entriesStorageValid = true;
+
 function readStoredJSON(key, fallback, validator, description) {
   try {
     const raw = localStorage.getItem(key);
@@ -63,6 +65,7 @@ function readStoredJSON(key, fallback, validator, description) {
     if (!validator(value)) throw new Error(t("error.invalidStoredData"));
     return value;
   } catch (error) {
+    if (key === ENTRIES_STORAGE_KEY) entriesStorageValid = false;
     alert(
       t("error.storageRead", { description: t(description), error: error.message })
     );
@@ -277,7 +280,14 @@ function renderSleepChart(days, property) {
    Persistence
    -------------------------------------------------------------------------- */
 
+function ensureEntriesStorageValid() {
+  if (entriesStorageValid) return true;
+  alert(t("error.entriesUnavailable"));
+  return false;
+}
+
 function saveEntries(nextEntries = entries) {
+  if (!ensureEntriesStorageValid()) return false;
   try {
     localStorage.setItem(ENTRIES_STORAGE_KEY, JSON.stringify(nextEntries));
     entries = nextEntries;
@@ -788,6 +798,7 @@ function renderStats() {
    -------------------------------------------------------------------------- */
 
 async function handleExportPdf() {
+  if (!ensureEntriesStorageValid()) return;
   try {
     const { createSleepReport } = await import("./pdf-report.js");
     createSleepReport(entries, language).save("schlaftagebuch.pdf");
@@ -817,6 +828,7 @@ function handleSaveSettings() {
 
 /** Downloads settings and entries as a JSON file. */
 function handleExport() {
+  if (!ensureEntriesStorageValid()) return;
   const json = JSON.stringify({ settings, entries }, null, 2);
   const blob = new Blob([json], { type: "application/json" });
 
@@ -893,6 +905,7 @@ function replaceWithImportedData(importedData) {
 
   entries = importedData.entries;
   settings = importedData.settings;
+  entriesStorageValid = true;
   dom.defaultStart.value = settings.start;
   dom.defaultEnd.value = settings.end;
   renderWindowInfo();
@@ -944,6 +957,7 @@ function confirmClearAllData() {
     alert(t("error.clear", { error: error.message }));
     return;
   }
+  entriesStorageValid = true;
   dom.clearDialog.close();
   entries = [];
   resetForm();
