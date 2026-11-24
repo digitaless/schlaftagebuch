@@ -25,7 +25,7 @@ Voraussetzung: Node.js `^20.19.0` oder `>=22.12.0`.
 npm install
 npm run dev       # Entwicklungsserver
 npm test          # Regressionstests
-npm run build     # Produktions-Build nach dist/
+npm run build     # Produktions-Build inkl. sitemap.xml und robots.txt nach dist/
 npm run preview   # Build lokal ansehen
 ```
 
